@@ -12,6 +12,11 @@ type EndpointPolicy interface {
 	Match(channelType int) bool
 	SupportedInterfaces() []string
 	ValidateEndpoint(ctx *RequestContext, channel ChannelInfo) error
+	SupportsRequestEndpoint(ctx *RequestContext, channel ChannelInfo) bool
+}
+
+type ChatCompletionsToResponsesPolicy interface {
+	ShouldUseChatCompletionsToResponses(ctx *RequestContext, channel ChannelInfo) bool
 }
 
 type BaseEndpointPolicy struct {
@@ -46,6 +51,10 @@ func (p *BaseEndpointPolicy) ValidateEndpoint(ctx *RequestContext, channel Chann
 	return fmt.Errorf("%s channel does not support %s endpoint", p.name, interfaceType)
 }
 
+func (p *BaseEndpointPolicy) SupportsRequestEndpoint(ctx *RequestContext, channel ChannelInfo) bool {
+	return p.ValidateEndpoint(ctx, channel) == nil
+}
+
 type CodexEndpointPolicy struct {
 	BaseEndpointPolicy
 }
@@ -63,6 +72,27 @@ func (p *CodexEndpointPolicy) ValidateEndpoint(ctx *RequestContext, channel Chan
 		return fmt.Errorf("Codex 渠道只支持 /v1/responses 和 /v1/responses/compact，不支持当前接口")
 	}
 	return nil
+}
+
+func (p *CodexEndpointPolicy) SupportsRequestEndpoint(ctx *RequestContext, channel ChannelInfo) bool {
+	if p.BaseEndpointPolicy.SupportsRequestEndpoint(ctx, channel) {
+		return true
+	}
+	return p.ShouldUseChatCompletionsToResponses(ctx, channel)
+}
+
+func (p *CodexEndpointPolicy) ShouldUseChatCompletionsToResponses(ctx *RequestContext, channel ChannelInfo) bool {
+	if ctx == nil {
+		return false
+	}
+	if channel.Type != constant.ChannelTypeCodex {
+		return false
+	}
+	if !IsChatCompletionsPath(ctx.Path) {
+		return false
+	}
+	model := strings.ToLower(strings.TrimSpace(ctx.Model))
+	return strings.HasPrefix(model, "gpt-")
 }
 
 func NewOpenAICompatibleEndpointPolicy() *BaseEndpointPolicy {
@@ -121,6 +151,32 @@ func SupportsEndpoint(channelType int, path string) bool {
 		return true
 	}
 	return policy.ValidateEndpoint(&RequestContext{Path: path}, ChannelInfo{Type: channelType}) == nil
+}
+
+func SupportsRequestEndpoint(ctx *RequestContext, channel ChannelInfo) bool {
+	if ctx == nil {
+		return false
+	}
+	policy := NewEndpointPolicyRegistry().Match(channel)
+	if policy == nil {
+		return true
+	}
+	return policy.SupportsRequestEndpoint(ctx, channel)
+}
+
+func ShouldUseChatCompletionsToResponses(ctx *RequestContext, channel ChannelInfo) bool {
+	policy := NewEndpointPolicyRegistry().Match(channel)
+	compatPolicy, ok := policy.(ChatCompletionsToResponsesPolicy)
+	if !ok {
+		return false
+	}
+	return compatPolicy.ShouldUseChatCompletionsToResponses(ctx, channel)
+}
+
+func IsChatCompletionsPath(path string) bool {
+	normalized := strings.ToLower(strings.TrimSpace(path))
+	return strings.HasPrefix(normalized, "/v1/chat/completions") ||
+		strings.HasPrefix(normalized, "/pg/chat/completions")
 }
 
 func DetectInterfaceType(path string) string {

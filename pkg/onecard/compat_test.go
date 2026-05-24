@@ -56,3 +56,30 @@ func TestSupportsEndpoint(t *testing.T) {
 		t.Fatal("expected unknown channel types to fall back to existing behavior")
 	}
 }
+
+func TestSupportsRequestEndpointAllowsCodexChatViaResponses(t *testing.T) {
+	if !SupportsRequestEndpoint(&RequestContext{
+		Model: "gpt-5.4",
+		Path:  "/v1/chat/completions",
+	}, ChannelInfo{Type: constant.ChannelTypeCodex}) {
+		t.Fatal("expected codex gpt chat completions to be allowed via responses compatibility")
+	}
+	if SupportsRequestEndpoint(&RequestContext{
+		Model: "claude-sonnet-4-5",
+		Path:  "/v1/chat/completions",
+	}, ChannelInfo{Type: constant.ChannelTypeCodex}) {
+		t.Fatal("expected non-gpt codex chat completions to be rejected")
+	}
+	if SupportsRequestEndpoint(&RequestContext{
+		Model: "gpt-5.4",
+		Path:  "/v1/messages",
+	}, ChannelInfo{Type: constant.ChannelTypeCodex}) {
+		t.Fatal("expected codex messages endpoint to be rejected")
+	}
+	if SupportsRequestEndpoint(&RequestContext{
+		Model: "gpt-5.4",
+		Path:  "/backend-api/something",
+	}, ChannelInfo{Type: constant.ChannelTypeCodex}) {
+		t.Fatal("expected unknown codex endpoint to be rejected")
+	}
+}

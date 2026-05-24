@@ -338,12 +338,17 @@ func validateOneCardEndpoint(c *gin.Context, info *relaycommon.RelayInfo, channe
 	if policy == nil {
 		return nil
 	}
-	if err := policy.ValidateEndpoint(&onecard.RequestContext{
+	requestContext := &onecard.RequestContext{
 		TokenGroup: info.TokenGroup,
 		UserGroup:  info.UserGroup,
 		Model:      info.OriginModelName,
 		Path:       c.Request.URL.Path,
-	}, onecard.ChannelInfo{ID: channel.Id, Type: channel.Type}); err != nil {
+	}
+	channelInfo := onecard.ChannelInfo{ID: channel.Id, Type: channel.Type}
+	if err := policy.ValidateEndpoint(requestContext, channelInfo); err != nil {
+		if onecard.ShouldUseChatCompletionsToResponses(requestContext, channelInfo) {
+			return nil
+		}
 		return types.NewErrorWithStatusCode(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
 	}
 	return nil

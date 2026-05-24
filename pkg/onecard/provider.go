@@ -7,6 +7,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/constant"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 )
 
 type ProviderAdapter interface {
@@ -108,9 +109,24 @@ func NewCodexProvider() *CodexProvider {
 		channelType: constant.ChannelTypeCodex,
 		name:        ProviderCodex,
 		baseURL:     "https://chatgpt.com",
-		models:      []string{"gpt-5", "gpt-5-codex"},
+		models:      codexDefaultModels(),
 		interfaces:  []string{InterfaceResponses, InterfaceResponsesCompact},
 	}}
+}
+
+func codexDefaultModels() []string {
+	base := []string{
+		"gpt-5", "gpt-5-codex", "gpt-5-codex-mini",
+		"gpt-5.1", "gpt-5.1-codex", "gpt-5.1-codex-max", "gpt-5.1-codex-mini",
+		"gpt-5.2", "gpt-5.2-codex", "gpt-5.3-codex", "gpt-5.3-codex-spark",
+		"gpt-5.4",
+	}
+	models := make([]string, 0, len(base)*2)
+	models = append(models, base...)
+	for _, model := range base {
+		models = append(models, ratio_setting.WithCompactModelSuffix(model))
+	}
+	return models
 }
 
 func (p *CodexProvider) BuildChannel(input *AccountImportItem, pool string) (*ChannelDraft, error) {

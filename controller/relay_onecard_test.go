@@ -13,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func TestValidateOneCardEndpointRejectsCodexChatCompletions(t *testing.T) {
+func TestValidateOneCardEndpointAllowsCodexChatCompletionsViaResponsesCompatibility(t *testing.T) {
 	originalEnabled := setting.OneCardEnabled()
 	t.Cleanup(func() {
 		setting.SetOneCardEnabled(originalEnabled)
@@ -31,11 +31,8 @@ func TestValidateOneCardEndpointRejectsCodexChatCompletions(t *testing.T) {
 		Id:   1,
 		Type: constant.ChannelTypeCodex,
 	})
-	if err == nil {
-		t.Fatal("expected codex chat completions to be rejected")
-	}
-	if err.StatusCode != http.StatusBadRequest {
-		t.Fatalf("expected 400 status, got %d", err.StatusCode)
+	if err != nil {
+		t.Fatalf("expected codex chat completions to be allowed via responses compatibility: %v", err)
 	}
 }
 
@@ -59,5 +56,31 @@ func TestValidateOneCardEndpointAllowsCodexResponses(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("expected codex responses to be allowed: %v", err)
+	}
+}
+
+func TestValidateOneCardEndpointRejectsCodexChatCompletionsWhenCompatibilityMisses(t *testing.T) {
+	originalEnabled := setting.OneCardEnabled()
+	t.Cleanup(func() {
+		setting.SetOneCardEnabled(originalEnabled)
+	})
+	setting.SetOneCardEnabled(true)
+
+	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/chat/completions", nil)
+
+	err := validateOneCardEndpoint(c, &relaycommon.RelayInfo{
+		TokenGroup:      "free",
+		UserGroup:       "default",
+		OriginModelName: "claude-sonnet-4-5",
+	}, &model.Channel{
+		Id:   1,
+		Type: constant.ChannelTypeCodex,
+	})
+	if err == nil {
+		t.Fatal("expected codex chat completions to be rejected when compatibility misses")
+	}
+	if err.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400 status, got %d", err.StatusCode)
 	}
 }

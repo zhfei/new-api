@@ -169,16 +169,24 @@ func oneCardEndpointFilter(param *RetryParam) model.ChannelFilter {
 		return nil
 	}
 	return func(channel *model.Channel) bool {
-		return ChannelSupportsRequestEndpoint(param.TokenGroup, param.RequestPath, channel)
+		return ChannelSupportsRequestEndpointForModel(param.TokenGroup, param.RequestPath, param.ModelName, channel)
 	}
 }
 
 func ChannelSupportsRequestEndpoint(tokenGroup string, requestPath string, channel *model.Channel) bool {
+	return ChannelSupportsRequestEndpointForModel(tokenGroup, requestPath, "", channel)
+}
+
+func ChannelSupportsRequestEndpointForModel(tokenGroup string, requestPath string, modelName string, channel *model.Channel) bool {
 	if channel == nil {
 		return false
 	}
 	if !setting.OneCardEnabled() || !setting.IsOneCardGroup(tokenGroup) || requestPath == "" {
 		return true
 	}
-	return onecard.SupportsEndpoint(channel.Type, requestPath)
+	return onecard.SupportsRequestEndpoint(&onecard.RequestContext{
+		TokenGroup: tokenGroup,
+		Model:      modelName,
+		Path:       requestPath,
+	}, onecard.ChannelInfo{ID: channel.Id, Type: channel.Type})
 }
