@@ -444,6 +444,22 @@ function BalanceCell({ channel }: { channel: Channel }) {
   )
 }
 
+function isOneCard429AutoDisabled(channel: Channel) {
+  if (channel.status !== 3 || !channel.other_info) return false
+
+  try {
+    const otherInfo = JSON.parse(channel.other_info) as Record<string, unknown>
+    const recoverReason = String(
+      otherInfo.onecard_auto_recover_reason ?? ''
+    ).toLowerCase()
+    const statusReason = String(otherInfo.status_reason ?? '').toLowerCase()
+
+    return recoverReason === '429' || statusReason.includes('429')
+  } catch {
+    return false
+  }
+}
+
 /**
  * Generate channels columns configuration
  */
@@ -552,6 +568,7 @@ export function useChannelsColumns(): ColumnDef<Channel>[] {
         // Regular channel row
         const settings = parseChannelSettings(channel.setting)
         const isPassThrough = settings.pass_through_body_enabled === true
+        const is429AutoDisabled = isOneCard429AutoDisabled(channel)
 
         return (
           <div className='flex items-center gap-2'>
@@ -559,7 +576,10 @@ export function useChannelsColumns(): ColumnDef<Channel>[] {
               <div className='flex items-center gap-1.5'>
                 <TruncatedText
                   text={name}
-                  className='font-medium'
+                  className={cn(
+                    'font-medium',
+                    is429AutoDisabled && 'text-amber-600 dark:text-amber-400'
+                  )}
                   maxWidth='max-w-[180px]'
                 />
                 {isPassThrough && (
