@@ -184,6 +184,35 @@ const groupSchema = z.object({
     }
   }),
   DefaultUseAutoGroup: z.boolean(),
+  OneCardEnabled: z.boolean(),
+  SubscriptionFirstGroups: z.string().superRefine((value, ctx) => {
+    const result = validateJsonString(value, {
+      predicate: (parsed) =>
+        Array.isArray(parsed) &&
+        parsed.every((item) => typeof item === 'string'),
+      predicateMessage: 'Expected a JSON array of group identifiers',
+    })
+    if (!result.valid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: result.message || 'Invalid JSON array',
+      })
+    }
+  }),
+  OfficialPriceRequiredGroups: z.string().superRefine((value, ctx) => {
+    const result = validateJsonString(value, {
+      predicate: (parsed) =>
+        Array.isArray(parsed) &&
+        parsed.every((item) => typeof item === 'string'),
+      predicateMessage: 'Expected a JSON array of group identifiers',
+    })
+    if (!result.valid) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: result.message || 'Invalid JSON array',
+      })
+    }
+  }),
   GroupSpecialUsableGroup: z.string().superRefine((value, ctx) => {
     const result = validateJsonString(value)
     if (!result.valid) {
@@ -260,6 +289,13 @@ export function RatioSettingsCard({
     GroupGroupRatio: normalizeJsonString(groupDefaults.GroupGroupRatio),
     AutoGroups: normalizeJsonString(groupDefaults.AutoGroups),
     DefaultUseAutoGroup: groupDefaults.DefaultUseAutoGroup,
+    OneCardEnabled: groupDefaults.OneCardEnabled,
+    SubscriptionFirstGroups: normalizeJsonString(
+      groupDefaults.SubscriptionFirstGroups
+    ),
+    OfficialPriceRequiredGroups: normalizeJsonString(
+      groupDefaults.OfficialPriceRequiredGroups
+    ),
     GroupSpecialUsableGroup: normalizeJsonString(
       groupDefaults.GroupSpecialUsableGroup
     ),
@@ -295,6 +331,12 @@ export function RatioSettingsCard({
       UserUsableGroups: formatJsonForTextarea(groupDefaults.UserUsableGroups),
       GroupGroupRatio: formatJsonForTextarea(groupDefaults.GroupGroupRatio),
       AutoGroups: formatJsonForTextarea(groupDefaults.AutoGroups),
+      SubscriptionFirstGroups: formatJsonForTextarea(
+        groupDefaults.SubscriptionFirstGroups
+      ),
+      OfficialPriceRequiredGroups: formatJsonForTextarea(
+        groupDefaults.OfficialPriceRequiredGroups
+      ),
       GroupSpecialUsableGroup: formatJsonForTextarea(
         groupDefaults.GroupSpecialUsableGroup
       ),
@@ -343,6 +385,13 @@ export function RatioSettingsCard({
       GroupGroupRatio: normalizeJsonString(groupDefaults.GroupGroupRatio),
       AutoGroups: normalizeJsonString(groupDefaults.AutoGroups),
       DefaultUseAutoGroup: groupDefaults.DefaultUseAutoGroup,
+      OneCardEnabled: groupDefaults.OneCardEnabled,
+      SubscriptionFirstGroups: normalizeJsonString(
+        groupDefaults.SubscriptionFirstGroups
+      ),
+      OfficialPriceRequiredGroups: normalizeJsonString(
+        groupDefaults.OfficialPriceRequiredGroups
+      ),
       GroupSpecialUsableGroup: normalizeJsonString(
         groupDefaults.GroupSpecialUsableGroup
       ),
@@ -355,6 +404,12 @@ export function RatioSettingsCard({
       UserUsableGroups: formatJsonForTextarea(groupDefaults.UserUsableGroups),
       GroupGroupRatio: formatJsonForTextarea(groupDefaults.GroupGroupRatio),
       AutoGroups: formatJsonForTextarea(groupDefaults.AutoGroups),
+      SubscriptionFirstGroups: formatJsonForTextarea(
+        groupDefaults.SubscriptionFirstGroups
+      ),
+      OfficialPriceRequiredGroups: formatJsonForTextarea(
+        groupDefaults.OfficialPriceRequiredGroups
+      ),
       GroupSpecialUsableGroup: formatJsonForTextarea(
         groupDefaults.GroupSpecialUsableGroup
       ),
@@ -405,6 +460,13 @@ export function RatioSettingsCard({
         GroupGroupRatio: normalizeJsonString(values.GroupGroupRatio),
         AutoGroups: normalizeJsonString(values.AutoGroups),
         DefaultUseAutoGroup: values.DefaultUseAutoGroup,
+        OneCardEnabled: values.OneCardEnabled,
+        SubscriptionFirstGroups: normalizeJsonString(
+          values.SubscriptionFirstGroups
+        ),
+        OfficialPriceRequiredGroups: normalizeJsonString(
+          values.OfficialPriceRequiredGroups
+        ),
         GroupSpecialUsableGroup: normalizeJsonString(
           values.GroupSpecialUsableGroup
         ),

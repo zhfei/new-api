@@ -95,6 +95,10 @@ const AddEditSubscriptionModal = ({
     max_purchase_per_user: 0,
     total_amount: 0,
     upgrade_group: '',
+    product_type: '',
+    pool_group: '',
+    display_badge: '',
+    metadata: '',
     stripe_price_id: '',
     creem_product_id: '',
   });
@@ -121,6 +125,10 @@ const AddEditSubscriptionModal = ({
         quotaToDisplayAmount(p.total_amount || 0).toFixed(2),
       ),
       upgrade_group: p.upgrade_group || '',
+      product_type: p.product_type || '',
+      pool_group: p.pool_group || '',
+      display_badge: p.display_badge || '',
+      metadata: p.metadata || '',
       stripe_price_id: p.stripe_price_id || '',
       creem_product_id: p.creem_product_id || '',
     };
@@ -164,6 +172,10 @@ const AddEditSubscriptionModal = ({
           max_purchase_per_user: Number(values.max_purchase_per_user || 0),
           total_amount: displayAmountToQuota(values.total_amount),
           upgrade_group: values.upgrade_group || '',
+          product_type: values.product_type || '',
+          pool_group: values.pool_group || '',
+          display_badge: values.display_badge || '',
+          metadata: values.metadata || '',
         },
       };
       if (editingPlan?.plan?.id) {
@@ -376,6 +388,59 @@ const AddEditSubscriptionModal = ({
                         field='enabled'
                         label={t('启用状态')}
                         size='large'
+                      />
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Select
+                        field='product_type'
+                        label={t('商品类型')}
+                        placeholder={t('普通订阅')}
+                        showClear
+                        extraText={t('一卡通日卡/周卡/月卡需使用 custom + 86400 秒重置')}
+                      >
+                        <Select.Option value=''>{t('普通订阅')}</Select.Option>
+                        <Select.Option value='day_card'>{t('日卡')}</Select.Option>
+                        <Select.Option value='week_card'>{t('周卡')}</Select.Option>
+                        <Select.Option value='month_card'>{t('月卡')}</Select.Option>
+                      </Form.Select>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Select
+                        field='pool_group'
+                        label={t('默认展示池组')}
+                        placeholder={t('不展示')}
+                        showClear
+                        extraText={t('只影响商品展示，不修改 API Key 分组')}
+                      >
+                        <Select.Option value=''>{t('不展示')}</Select.Option>
+                        {['free', 'plus', 'pro', 'auto'].map((g) => (
+                          <Select.Option key={g} value={g}>
+                            {g}
+                          </Select.Option>
+                        ))}
+                      </Form.Select>
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Input
+                        field='display_badge'
+                        label={t('展示标签')}
+                        placeholder='OneCard'
+                        showClear
+                      />
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.TextArea
+                        field='metadata'
+                        label={t('元数据')}
+                        placeholder='["24小时重置", "auto 按 free -> plus -> pro"]'
+                        extraText={t(
+                          '展示在用户购买卡片中，支持纯文本、JSON数组，或 benefits/features/selling_points 字段',
+                        )}
+                        autosize={{ minRows: 2, maxRows: 4 }}
                       />
                     </Col>
                   </Row>

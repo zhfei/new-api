@@ -57,6 +57,9 @@ const OPTION_KEYS = [
   'group_ratio_setting.group_special_usable_group',
   'AutoGroups',
   'DefaultUseAutoGroup',
+  'OneCardEnabled',
+  'SubscriptionFirstGroups',
+  'OfficialPriceRequiredGroups',
 ];
 
 function parseJSONSafe(str, fallback) {
@@ -81,6 +84,9 @@ export default function GroupRatioSettings(props) {
     'group_ratio_setting.group_special_usable_group': '',
     AutoGroups: '',
     DefaultUseAutoGroup: false,
+    OneCardEnabled: true,
+    SubscriptionFirstGroups: '',
+    OfficialPriceRequiredGroups: '',
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
@@ -176,6 +182,17 @@ export default function GroupRatioSettings(props) {
     }));
   }, []);
 
+  const validateJSONStringArray = (value) => {
+    if (!value || value.trim() === '') return true;
+    try {
+      const parsed = JSON.parse(value);
+      if (!Array.isArray(parsed)) return false;
+      return parsed.every((item) => typeof item === 'string');
+    } catch {
+      return false;
+    }
+  };
+
   const dv = dataVersionRef.current;
 
   const renderVisualMode = () => (
@@ -249,6 +266,56 @@ export default function GroupRatioSettings(props) {
           groupNames={groupNames}
           onChange={handleSpecialUsableChange}
         />
+      </Form.Section>
+
+      <Form.Section text='OneCard'>
+        <Text type='tertiary' size='small' style={{ display: 'block', marginBottom: 12 }}>
+          {t('一卡通资源池使用 free、plus、pro、auto 分组；auto 按 free -> plus -> pro 顺序访问。')}
+        </Text>
+        <Row gutter={16}>
+          <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+            <Form.Slot label='OneCard'>
+              <Switch
+                checked={!!inputs.OneCardEnabled}
+                size='default'
+                checkedText='｜'
+                uncheckedText='〇'
+                onChange={(value) =>
+                  setInputs((prev) => ({
+                    ...prev,
+                    OneCardEnabled: value,
+                  }))
+                }
+              />
+            </Form.Slot>
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+            <Form.TextArea
+              label={t('订阅优先支付分组')}
+              value={inputs.SubscriptionFirstGroups}
+              autosize={{ minRows: 3, maxRows: 6 }}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  SubscriptionFirstGroups: value,
+                }))
+              }
+            />
+          </Col>
+          <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+            <Form.TextArea
+              label={t('官方价格必填分组')}
+              value={inputs.OfficialPriceRequiredGroups}
+              autosize={{ minRows: 3, maxRows: 6 }}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  OfficialPriceRequiredGroups: value,
+                }))
+              }
+            />
+          </Col>
+        </Row>
       </Form.Section>
     </Form>
   );
@@ -380,14 +447,7 @@ export default function GroupRatioSettings(props) {
               rules={[
                 {
                   validator: (rule, value) => {
-                    if (!value || value.trim() === '') return true;
-                    try {
-                      const parsed = JSON.parse(value);
-                      if (!Array.isArray(parsed)) return false;
-                      return parsed.every((item) => typeof item === 'string');
-                    } catch {
-                      return false;
-                    }
+                    return validateJSONStringArray(value);
                   },
                   message: t(
                     '必须是有效的 JSON 字符串数组，例如：["g1","g2"]',
@@ -411,6 +471,70 @@ export default function GroupRatioSettings(props) {
                 setInputs((prev) => ({
                   ...prev,
                   DefaultUseAutoGroup: value,
+                }))
+              }
+            />
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col span={16}>
+            <Form.Switch
+              label='OneCard'
+              field={'OneCardEnabled'}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  OneCardEnabled: value,
+                }))
+              }
+            />
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col xs={24} sm={16}>
+            <Form.TextArea
+              label={t('订阅优先支付分组')}
+              field={'SubscriptionFirstGroups'}
+              autosize={{ minRows: 3, maxRows: 6 }}
+              trigger='blur'
+              stopValidateWithError
+              rules={[
+                {
+                  validator: (rule, value) => validateJSONStringArray(value),
+                  message: t(
+                    '必须是有效的 JSON 字符串数组，例如：["free","plus","pro","auto"]',
+                  ),
+                },
+              ]}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  SubscriptionFirstGroups: value,
+                }))
+              }
+            />
+          </Col>
+        </Row>
+        <Row gutter={16}>
+          <Col xs={24} sm={16}>
+            <Form.TextArea
+              label={t('官方价格必填分组')}
+              field={'OfficialPriceRequiredGroups'}
+              autosize={{ minRows: 3, maxRows: 6 }}
+              trigger='blur'
+              stopValidateWithError
+              rules={[
+                {
+                  validator: (rule, value) => validateJSONStringArray(value),
+                  message: t(
+                    '必须是有效的 JSON 字符串数组，例如：["free","plus","pro","auto"]',
+                  ),
+                },
+              ]}
+              onChange={(value) =>
+                setInputs((prev) => ({
+                  ...prev,
+                  OfficialPriceRequiredGroups: value,
                 }))
               }
             />

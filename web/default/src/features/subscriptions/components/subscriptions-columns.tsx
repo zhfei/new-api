@@ -184,6 +184,39 @@ export function useSubscriptionsColumns(): ColumnDef<PlanRecord>[] {
         size: 100,
       },
       {
+        id: 'onecard',
+        meta: { label: 'OneCard', mobileHidden: true },
+        header: ({ column }) => (
+          <DataTableColumnHeader column={column} title='OneCard' />
+        ),
+        cell: ({ row }) => {
+          const plan = row.original.plan
+          if (!plan.product_type && !plan.pool_group && !plan.display_badge) {
+            return <span className='text-muted-foreground'>-</span>
+          }
+          return (
+            <div className='flex flex-wrap gap-1'>
+              {plan.product_type && (
+                <StatusBadge
+                  label={plan.product_type}
+                  variant='neutral'
+                  copyable={false}
+                />
+              )}
+              {plan.pool_group && <GroupBadge group={plan.pool_group} />}
+              {plan.display_badge && (
+                <StatusBadge
+                  label={plan.display_badge}
+                  variant='info'
+                  copyable={false}
+                />
+              )}
+            </div>
+          )
+        },
+        size: 150,
+      },
+      {
         id: 'upgrade_group',
         meta: { label: t('Upgrade Group'), mobileHidden: true },
         header: ({ column }) => (

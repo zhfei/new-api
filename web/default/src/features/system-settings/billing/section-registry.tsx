@@ -46,6 +46,9 @@ const getGroupDefaults = (settings: BillingSettings) => ({
   GroupGroupRatio: settings.GroupGroupRatio,
   AutoGroups: settings.AutoGroups,
   DefaultUseAutoGroup: settings.DefaultUseAutoGroup,
+  OneCardEnabled: settings.OneCardEnabled,
+  SubscriptionFirstGroups: settings.SubscriptionFirstGroups,
+  OfficialPriceRequiredGroups: settings.OfficialPriceRequiredGroups,
   GroupSpecialUsableGroup:
     settings['group_ratio_setting.group_special_usable_group'],
 })

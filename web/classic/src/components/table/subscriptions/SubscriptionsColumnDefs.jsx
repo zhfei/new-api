@@ -101,6 +101,12 @@ const renderPlanTitle = (text, record, t) => {
         <Text>{formatDuration(plan, t)}</Text>
         <Text type='tertiary'>{t('重置')}</Text>
         <Text>{formatResetPeriod(plan, t)}</Text>
+        <Text type='tertiary'>OneCard</Text>
+        <Text>
+          {[plan?.product_type, plan?.pool_group, plan?.display_badge]
+            .filter(Boolean)
+            .join(' / ') || '-'}
+        </Text>
       </div>
     </div>
   );
@@ -189,6 +195,27 @@ const renderUpgradeGroup = (text, record, t) => {
     <Text type={group ? 'secondary' : 'tertiary'}>
       {group ? group : t('不升级')}
     </Text>
+  );
+};
+
+const renderOneCard = (text, record) => {
+  const plan = record?.plan || {};
+  const items = [
+    plan.product_type && { color: 'grey', text: plan.product_type },
+    plan.pool_group && { color: 'blue', text: plan.pool_group },
+    plan.display_badge && { color: 'green', text: plan.display_badge },
+  ].filter(Boolean);
+  if (!items.length) {
+    return <Text type='tertiary'>-</Text>;
+  }
+  return (
+    <Space spacing={4} wrap>
+      {items.map((item) => (
+        <Tag key={`${item.color}-${item.text}`} color={item.color} shape='circle'>
+          {item.text}
+        </Tag>
+      ))}
+    </Space>
   );
 };
 
@@ -357,6 +384,11 @@ export const getSubscriptionsColumns = ({
       title: t('升级分组'),
       width: 100,
       render: (text, record) => renderUpgradeGroup(text, record, t),
+    },
+    {
+      title: 'OneCard',
+      width: 150,
+      render: (text, record) => renderOneCard(text, record),
     },
     {
       title: t('操作'),

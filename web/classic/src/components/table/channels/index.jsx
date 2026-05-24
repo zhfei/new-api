@@ -17,7 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 For commercial licensing, please contact support@quantumnous.com
 */
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Banner } from '@douyinfe/semi-ui';
 import { IconAlertTriangle } from '@douyinfe/semi-icons';
 import CardPro from '../../common/ui/CardPro';
@@ -34,11 +34,20 @@ import EditChannelModal from './modals/EditChannelModal';
 import EditTagModal from './modals/EditTagModal';
 import MultiKeyManageModal from './modals/MultiKeyManageModal';
 import ChannelUpstreamUpdateModal from './modals/ChannelUpstreamUpdateModal';
+import OneCardImportModal from './modals/OneCardImportModal';
+import OneCardPoolHealthCard from './OneCardPoolHealthCard';
 import { createCardProPagination } from '../../../helpers/utils';
 
 const ChannelsPage = () => {
   const channelsData = useChannelsData();
   const isMobile = useIsMobile();
+  const [showOneCardImportModal, setShowOneCardImportModal] = useState(false);
+  const [oneCardHealthRefreshKey, setOneCardHealthRefreshKey] = useState(0);
+
+  const handleOneCardImportSuccess = async () => {
+    setOneCardHealthRefreshKey((value) => value + 1);
+    await channelsData.refresh();
+  };
 
   return (
     <>
@@ -73,6 +82,12 @@ const ChannelsPage = () => {
         onConfirm={channelsData.applyUpstreamUpdates}
         onCancel={channelsData.closeUpstreamUpdateModal}
       />
+      <OneCardImportModal
+        visible={showOneCardImportModal}
+        onCancel={() => setShowOneCardImportModal(false)}
+        onSuccess={handleOneCardImportSuccess}
+        t={channelsData.t}
+      />
 
       {/* Main Content */}
       {channelsData.globalPassThroughEnabled ? (
@@ -91,10 +106,19 @@ const ChannelsPage = () => {
           style={{ marginBottom: 12 }}
         />
       ) : null}
+      <OneCardPoolHealthCard
+        refreshKey={oneCardHealthRefreshKey}
+        t={channelsData.t}
+      />
       <CardPro
         type='type3'
         tabsArea={<ChannelsTabs {...channelsData} />}
-        actionsArea={<ChannelsActions {...channelsData} />}
+        actionsArea={
+          <ChannelsActions
+            {...channelsData}
+            setShowOneCardImportModal={setShowOneCardImportModal}
+          />
+        }
         searchArea={<ChannelsFilters {...channelsData} />}
         paginationArea={createCardProPagination({
           currentPage: channelsData.activePage,

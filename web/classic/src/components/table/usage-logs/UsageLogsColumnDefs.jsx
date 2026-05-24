@@ -437,6 +437,14 @@ function getUsageLogDetailSummary(record, text, billingDisplayMode, t) {
     return null;
   }
 
+  const routeSegment =
+    other?.requested_group || other?.using_group
+      ? {
+          text: `${t('池组')}：${other?.requested_group || '-'} -> ${other?.using_group || '-'}`,
+          tone: 'secondary',
+        }
+      : null;
+
   if (
     other?.violation_fee === true ||
     Boolean(other?.violation_fee_code) ||
@@ -450,6 +458,7 @@ function getUsageLogDetailSummary(record, text, billingDisplayMode, t) {
     );
     return {
       segments: [
+        routeSegment,
         groupText ? { text: groupText, tone: 'primary' } : null,
         { text: t('违规扣费'), tone: 'primary' },
         {
@@ -461,16 +470,28 @@ function getUsageLogDetailSummary(record, text, billingDisplayMode, t) {
     };
   }
 
-  const summaryOpts = { ...other, displayMode: billingDisplayMode, outputMode: 'segments' };
+  const summaryOpts = {
+    ...other,
+    displayMode: billingDisplayMode,
+    outputMode: 'segments',
+  };
 
   if (other?.billing_mode === 'tiered_expr') {
-    return { segments: renderTieredModelPriceSimple(summaryOpts) };
+    return {
+      segments: [
+        routeSegment,
+        ...renderTieredModelPriceSimple(summaryOpts),
+      ].filter(Boolean),
+    };
   }
 
   return {
-    segments: other?.claude
-      ? renderModelPriceSimple({ ...summaryOpts, provider: 'claude' })
-      : renderModelPriceSimple({ ...summaryOpts, provider: 'openai' }),
+    segments: [
+      routeSegment,
+      ...(other?.claude
+        ? renderModelPriceSimple({ ...summaryOpts, provider: 'claude' })
+        : renderModelPriceSimple({ ...summaryOpts, provider: 'openai' })),
+    ].filter(Boolean),
   };
 }
 

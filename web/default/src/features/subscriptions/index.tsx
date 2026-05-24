@@ -27,6 +27,7 @@ import {
   useSubscriptions,
 } from './components/subscriptions-provider'
 import { SubscriptionsTable } from './components/subscriptions-table'
+import { OneCardAdminOverview } from './components/onecard-admin-overview'
 
 function SubscriptionsContent() {
   const { t } = useTranslation()
@@ -64,6 +65,7 @@ function SubscriptionsContent() {
               </AlertDescription>
             </Alert>
           ) : null}
+          <OneCardAdminOverview />
           <SubscriptionsTable />
         </SectionPageLayout.Content>
       </SectionPageLayout>

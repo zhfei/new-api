@@ -13,6 +13,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/dto"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/onecard"
 	relaychannel "github.com/QuantumNous/new-api/relay/channel"
 	"github.com/QuantumNous/new-api/relay/channel/gemini"
 	"github.com/QuantumNous/new-api/relay/channel/ollama"
@@ -550,6 +551,120 @@ type AddChannelRequest struct {
 	MultiKeyMode              constant.MultiKeyMode `json:"multi_key_mode"`
 	BatchAddSetKeyPrefix2Name bool                  `json:"batch_add_set_key_prefix_2_name"`
 	Channel                   *model.Channel        `json:"channel"`
+}
+
+type oneCardChannelWriter struct{}
+
+func (w oneCardChannelWriter) CreateFromDraft(ctx context.Context, draft *onecard.ChannelDraft) error {
+	if draft == nil {
+		return fmt.Errorf("channel draft is nil")
+	}
+	baseURL := draft.BaseURL
+	modelMapping := draft.ModelMapping
+	tag := draft.Tag
+	priority := draft.Priority
+	weight := draft.Weight
+	channel := model.Channel{
+		Type:         draft.Type,
+		Key:          draft.Key,
+		Name:         draft.Name,
+		Group:        draft.Group,
+		Models:       draft.Models,
+		BaseURL:      &baseURL,
+		ModelMapping: &modelMapping,
+		Tag:          &tag,
+		Priority:     &priority,
+		Weight:       &weight,
+		Status:       common.ChannelStatusEnabled,
+		CreatedTime:  common.GetTimestamp(),
+	}
+	return channel.Insert()
+}
+
+func ImportOneCardChannels(c *gin.Context) {
+	var req onecard.AccountImportEnvelope
+	if err := c.ShouldBindJSON(&req); err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	items := onecard.NewImportParserRegistry().Parse(req)
+	if len(items) == 0 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "导入账号不能为空",
+		})
+		return
+	}
+	importer := onecard.NewAccountImporter(oneCardChannelWriter{})
+	result, err := importer.Import(c.Request.Context(), items)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if result.Created > 0 {
+		model.InitChannelCache()
+		service.ResetProxyClientCache()
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    result,
+	})
+}
+
+func GetOneCardPoolHealth(c *gin.Context) {
+	groups := []string{onecard.GroupFree, onecard.GroupPlus, onecard.GroupPro}
+	health := make([]onecard.PoolHealthReport, 0, len(groups))
+	checker := onecard.NewDefaultHealthChecker()
+
+	for _, group := range groups {
+		var stats struct {
+			Total          int64
+			Enabled        int64
+			ManualDisabled int64
+			AutoDisabled   int64
+			AvgResponse    float64
+			UsedQuota      int64
+			Balance        float64
+		}
+		query := model.ApplyChannelGroupFilter(model.DB.Model(&model.Channel{}), group)
+		err := query.Select(`
+			COUNT(*) AS total,
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) AS enabled,
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) AS manual_disabled,
+			COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) AS auto_disabled,
+			COALESCE(AVG(CASE WHEN response_time > 0 THEN response_time ELSE NULL END), 0) AS avg_response,
+			COALESCE(SUM(used_quota), 0) AS used_quota,
+			COALESCE(SUM(balance), 0) AS balance
+		`, common.ChannelStatusEnabled, common.ChannelStatusManuallyDisabled, common.ChannelStatusAutoDisabled).Scan(&stats).Error
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+
+		models := model.GetGroupEnabledModels(group)
+		item := checker.Evaluate(onecard.PoolHealthSnapshot{
+			Group:           group,
+			Total:           stats.Total,
+			Enabled:         stats.Enabled,
+			ManualDisabled:  stats.ManualDisabled,
+			AutoDisabled:    stats.AutoDisabled,
+			Models:          models,
+			AvgResponseTime: stats.AvgResponse,
+			UsedQuota:       stats.UsedQuota,
+			Balance:         stats.Balance,
+		})
+		health = append(health, item)
+	}
+
+	common.ApiSuccess(c, gin.H{
+		"items": health,
+		"auto_order": []string{
+			onecard.GroupFree,
+			onecard.GroupPlus,
+			onecard.GroupPro,
+		},
+	})
 }
 
 func getVertexArrayKeys(keys string) ([]string, error) {

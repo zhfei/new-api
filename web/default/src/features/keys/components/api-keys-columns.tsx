@@ -223,7 +223,7 @@ export function useApiKeysColumns(): ColumnDef<ApiKey>[] {
               <TooltipContent>
                 <span className='text-xs'>
                   {t(
-                    'Automatically selects the best available group with circuit breaker mechanism'
+                    'Auto uses free -> plus -> pro in order and bills by the actual group used.'
                   )}
                 </span>
               </TooltipContent>

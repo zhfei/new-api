@@ -23,6 +23,7 @@ import { CopyChannelDialog } from './dialogs/copy-channel-dialog'
 import { EditTagDialog } from './dialogs/edit-tag-dialog'
 import { FetchModelsDialog } from './dialogs/fetch-models-dialog'
 import { MultiKeyManageDialog } from './dialogs/multi-key-manage-dialog'
+import { OneCardImportDialog } from './dialogs/onecard-import-dialog'
 import { OllamaModelsDialog } from './dialogs/ollama-models-dialog'
 import { TagBatchEditDialog } from './dialogs/tag-batch-edit-dialog'
 import { UpstreamUpdateDialog } from './dialogs/upstream-update-dialog'
@@ -85,6 +86,12 @@ export function ChannelsDialogs() {
       {/* Edit Tag Dialog */}
       <EditTagDialog
         open={open === 'edit-tag'}
+        onOpenChange={(v) => !v && setOpen(null)}
+      />
+
+      {/* OneCard Import Dialog */}
+      <OneCardImportDialog
+        open={open === 'onecard-import'}
         onOpenChange={(v) => !v && setOpen(null)}
       />
 

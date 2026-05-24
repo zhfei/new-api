@@ -55,6 +55,9 @@ type GroupFormValues = {
   GroupGroupRatio: string
   AutoGroups: string
   DefaultUseAutoGroup: boolean
+  OneCardEnabled: boolean
+  SubscriptionFirstGroups: string
+  OfficialPriceRequiredGroups: string
   GroupSpecialUsableGroup: string
 }
 
@@ -156,6 +159,69 @@ export const GroupRatioForm = memo(function GroupRatioForm({
                 </FormItem>
               )}
             />
+
+            <div className='space-y-4 rounded-lg border p-4'>
+              <FormField
+                control={form.control}
+                name='OneCardEnabled'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between'>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-base'>OneCard</FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Enable OneCard pool strategy for free, plus, pro, and auto groups.'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='SubscriptionFirstGroups'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Subscription-first groups')}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'API keys in these groups force subscription-first billing.'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='OfficialPriceRequiredGroups'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Official-price required groups')}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      {t(
+                        'API keys in these groups cannot bypass missing official model prices.'
+                      )}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Button onClick={form.handleSubmit(onSave)} disabled={isSaving}>
               {isSaving ? t('Saving...') : t('Save group ratios')}
@@ -304,6 +370,59 @@ export const GroupRatioForm = memo(function GroupRatioForm({
                 </FormItem>
               )}
             />
+
+            <div className='space-y-4 rounded-lg border p-4'>
+              <FormField
+                control={form.control}
+                name='OneCardEnabled'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between'>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-base'>OneCard</FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Enable OneCard pool strategy for free, plus, pro, and auto groups.'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='SubscriptionFirstGroups'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Subscription-first groups')}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='OfficialPriceRequiredGroups'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Official-price required groups')}</FormLabel>
+                    <FormControl>
+                      <Textarea rows={3} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <Button type='submit' disabled={isSaving}>
               {isSaving ? t('Saving...') : t('Save group ratios')}

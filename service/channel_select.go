@@ -7,6 +7,7 @@ import (
 	"github.com/QuantumNous/new-api/constant"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/onecard"
 	"github.com/QuantumNous/new-api/setting"
 	"github.com/gin-gonic/gin"
 )
@@ -15,6 +16,7 @@ type RetryParam struct {
 	Ctx          *gin.Context
 	TokenGroup   string
 	ModelName    string
+	RequestPath  string
 	Retry        *int
 	resetNextTry bool
 }
@@ -85,6 +87,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 	var err error
 	selectGroup := param.TokenGroup
 	userGroup := common.GetContextKeyString(param.Ctx, constant.ContextKeyUserGroup)
+	channelFilter := oneCardEndpointFilter(param)
 
 	if param.TokenGroup == "auto" {
 		if len(setting.GetAutoGroups()) == 0 {
@@ -115,7 +118,7 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			}
 			logger.LogDebug(param.Ctx, "Auto selecting group: %s, priorityRetry: %d", autoGroup, priorityRetry)
 
-			channel, _ = model.GetRandomSatisfiedChannel(autoGroup, param.ModelName, priorityRetry)
+			channel, _ = model.GetRandomSatisfiedChannelWithFilter(autoGroup, param.ModelName, priorityRetry, channelFilter)
 			if channel == nil {
 				// Current group has no available channel for this model, try next group
 				// 当前分组没有该模型的可用渠道，尝试下一个分组
@@ -153,10 +156,29 @@ func CacheGetRandomSatisfiedChannel(param *RetryParam) (*model.Channel, string, 
 			break
 		}
 	} else {
-		channel, err = model.GetRandomSatisfiedChannel(param.TokenGroup, param.ModelName, param.GetRetry())
+		channel, err = model.GetRandomSatisfiedChannelWithFilter(param.TokenGroup, param.ModelName, param.GetRetry(), channelFilter)
 		if err != nil {
 			return nil, param.TokenGroup, err
 		}
 	}
 	return channel, selectGroup, nil
+}
+
+func oneCardEndpointFilter(param *RetryParam) model.ChannelFilter {
+	if param == nil || !setting.OneCardEnabled() || !setting.IsOneCardGroup(param.TokenGroup) || param.RequestPath == "" {
+		return nil
+	}
+	return func(channel *model.Channel) bool {
+		return ChannelSupportsRequestEndpoint(param.TokenGroup, param.RequestPath, channel)
+	}
+}
+
+func ChannelSupportsRequestEndpoint(tokenGroup string, requestPath string, channel *model.Channel) bool {
+	if channel == nil {
+		return false
+	}
+	if !setting.OneCardEnabled() || !setting.IsOneCardGroup(tokenGroup) || requestPath == "" {
+		return true
+	}
+	return onecard.SupportsEndpoint(channel.Type, requestPath)
 }

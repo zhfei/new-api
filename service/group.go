@@ -33,6 +33,12 @@ func GetUserUsableGroups(userGroup string) map[string]string {
 			groupsCopy[userGroup] = "用户分组"
 		}
 	}
+	if setting.OneCardEnabled() {
+		groupsCopy["free"] = "free 池"
+		groupsCopy["plus"] = "plus 池"
+		groupsCopy["pro"] = "pro 池"
+		groupsCopy["auto"] = "自动池"
+	}
 	return groupsCopy
 }
 

@@ -86,6 +86,46 @@ export type CodexCredentialRefreshResponse = {
   }
 }
 
+export type OneCardPoolHealthItem = {
+  group: string
+  total: number
+  enabled: number
+  disabled: number
+  manual_disabled: number
+  auto_disabled: number
+  model_count: number
+  models: string[]
+  avg_response_time: number
+  used_quota: number
+  balance: number
+  health_score: number
+}
+
+export type OneCardPoolHealthResponse = {
+  success: boolean
+  message?: string
+  data?: {
+    items: OneCardPoolHealthItem[]
+    auto_order: string[]
+  }
+}
+
+export type OneCardImportRequest = {
+  pool: string
+  provider: string
+  accounts: unknown[]
+}
+
+export type OneCardImportResponse = {
+  success: boolean
+  message?: string
+  data?: {
+    created: number
+    skipped: number
+    errors: string[]
+  }
+}
+
 // ============================================================================
 // Base Channel CRUD Operations
 // ============================================================================
@@ -115,6 +155,18 @@ export async function searchChannels(
  */
 export async function getChannel(id: number): Promise<GetChannelResponse> {
   const res = await api.get(`/api/channel/${id}`)
+  return res.data
+}
+
+export async function getOneCardPoolHealth(): Promise<OneCardPoolHealthResponse> {
+  const res = await api.get('/api/channel/onecard/health')
+  return res.data
+}
+
+export async function importOneCardChannels(
+  data: OneCardImportRequest
+): Promise<OneCardImportResponse> {
+  const res = await api.post('/api/channel/onecard/import', data)
   return res.data
 }
 

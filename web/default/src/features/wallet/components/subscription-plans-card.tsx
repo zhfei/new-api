@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { formatQuota } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
@@ -86,6 +87,54 @@ function getBillingPreferenceLabel(
     default:
       return preference
   }
+}
+
+function getProductTypeLabel(productType: string | undefined) {
+  switch (productType) {
+    case 'day_card':
+      return 'Day Card'
+    case 'week_card':
+      return 'Week Card'
+    case 'month_card':
+      return 'Month Card'
+    default:
+      return productType || ''
+  }
+}
+
+function parsePlanMetadataBenefits(metadata: string | undefined): string[] {
+  const raw = metadata?.trim()
+  if (!raw) return []
+  try {
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean)
+    }
+    if (parsed && typeof parsed === 'object') {
+      const obj = parsed as Record<string, unknown>
+      const values = [
+        obj.description,
+        obj.benefits,
+        obj.features,
+        obj.selling_points,
+      ]
+      return values.flatMap((value) => {
+        if (Array.isArray(value)) {
+          return value.map((item) => String(item).trim()).filter(Boolean)
+        }
+        if (typeof value === 'string' && value.trim()) {
+          return [value.trim()]
+        }
+        return []
+      })
+    }
+  } catch {
+    return raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+  }
+  return []
 }
 
 export function SubscriptionPlansCard({
@@ -227,6 +276,9 @@ export function SubscriptionPlansCard({
     if (total <= 0) return 0
     return Math.round((used / total) * 100)
   }
+
+  const getProgressPercent = (sub: UserSubscriptionRecord) =>
+    Math.min(100, getUsagePercent(sub))
 
   if (loading) {
     return (
@@ -384,6 +436,15 @@ export function SubscriptionPlansCard({
             </p>
           )}
 
+          <Alert className='mt-3'>
+            <Sparkles className='h-4 w-4' />
+            <AlertDescription className='text-xs'>
+              {t(
+                'OneCard deduction order: use one active card with positive remaining quota first, sorted by next reset time, card expiry time and card ID. The selected card can be overdrawn for this request; if no card is available, wallet balance is used.'
+              )}
+            </AlertDescription>
+          </Alert>
+
           {hasAny && (
             <>
               <Separator className='my-3' />
@@ -392,12 +453,16 @@ export function SubscriptionPlansCard({
                   const subscription = sub.subscription
                   const totalAmount = Number(subscription?.amount_total || 0)
                   const usedAmount = Number(subscription?.amount_used || 0)
+                  const rawRemainAmount = totalAmount - usedAmount
                   const remainAmount =
-                    totalAmount > 0 ? Math.max(0, totalAmount - usedAmount) : 0
+                    totalAmount > 0 ? Math.max(0, rawRemainAmount) : 0
+                  const overdraftAmount =
+                    totalAmount > 0 ? Math.max(0, -rawRemainAmount) : 0
                   const planTitle =
                     planTitleMap.get(subscription?.plan_id) || ''
                   const remainDays = getRemainingDays(sub)
                   const usagePercent = getUsagePercent(sub)
+                  const progressPercent = getProgressPercent(sub)
                   const now = Date.now() / 1000
                   const isExpired = (subscription?.end_time || 0) < now
                   const isCancelled = subscription?.status === 'cancelled'
@@ -472,10 +537,16 @@ export function SubscriptionPlansCard({
                               {formatQuota(usedAmount)}/
                               {formatQuota(totalAmount)} · {t('Remaining')}{' '}
                               {formatQuota(remainAmount)}
+                              {overdraftAmount > 0
+                                ? ` · ${t('Overdraft')} ${formatQuota(overdraftAmount)}`
+                                : ''}
                             </TooltipTrigger>
                             <TooltipContent>
                               {t('Raw Quota')}: {usedAmount}/{totalAmount} ·{' '}
                               {t('Remaining')} {remainAmount}
+                              {overdraftAmount > 0
+                                ? ` · ${t('Overdraft')} ${overdraftAmount}`
+                                : ''}
                             </TooltipContent>
                           </Tooltip>
                         ) : (
@@ -487,8 +558,18 @@ export function SubscriptionPlansCard({
                           </span>
                         )}
                       </div>
+                      {overdraftAmount > 0 && isActive && (
+                        <div className='mt-1 text-xs text-amber-600 dark:text-amber-400'>
+                          {t(
+                            'This period is overdrawn and will recover at the next reset.'
+                          )}
+                        </div>
+                      )}
                       {totalAmount > 0 && isActive && (
-                        <Progress value={usagePercent} className='mt-2 h-1.5' />
+                        <Progress
+                          value={progressPercent}
+                          className='mt-2 h-1.5'
+                        />
                       )}
                     </div>
                   )
@@ -518,6 +599,15 @@ export function SubscriptionPlansCard({
               const reached = limit > 0 && count >= limit
 
               const benefits = [
+                plan.product_type
+                  ? `${t('Card Type')}: ${t(getProductTypeLabel(plan.product_type))}`
+                  : null,
+                plan.pool_group
+                  ? `${t('Default Display Pool')}: ${plan.pool_group}`
+                  : null,
+                plan.display_badge
+                  ? `${t('Badge')}: ${plan.display_badge}`
+                  : null,
                 `${t('Validity Period')}: ${formatDuration(plan, t)}`,
                 formatResetPeriod(plan, t) !== t('No Reset')
                   ? `${t('Quota Reset')}: ${formatResetPeriod(plan, t)}`
@@ -529,6 +619,7 @@ export function SubscriptionPlansCard({
                 plan.upgrade_group
                   ? `${t('Upgrade Group')}: ${plan.upgrade_group}`
                   : null,
+                ...parsePlanMetadataBenefits(plan.metadata),
               ].filter(Boolean) as string[]
 
               return (

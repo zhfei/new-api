@@ -107,6 +107,8 @@ func Distribute() func(c *gin.Context) {
 								abortWithOpenAiMessage(c, http.StatusForbidden, i18n.T(c, i18n.MsgDistributorAffinityChannelDisabled))
 								return
 							}
+						} else if !service.ChannelSupportsRequestEndpoint(usingGroup, c.Request.URL.Path, preferred) {
+							// Keep looking: affinity may point to a model-compatible channel that does not support this endpoint.
 						} else if usingGroup == "auto" {
 							userGroup := common.GetContextKeyString(c, constant.ContextKeyUserGroup)
 							autoGroups := service.GetUserAutoGroup(userGroup)
@@ -129,10 +131,11 @@ func Distribute() func(c *gin.Context) {
 
 				if channel == nil {
 					channel, selectGroup, err = service.CacheGetRandomSatisfiedChannel(&service.RetryParam{
-						Ctx:        c,
-						ModelName:  modelRequest.Model,
-						TokenGroup: usingGroup,
-						Retry:      common.GetPointer(0),
+						Ctx:         c,
+						ModelName:   modelRequest.Model,
+						TokenGroup:  usingGroup,
+						RequestPath: c.Request.URL.Path,
+						Retry:       common.GetPointer(0),
 					})
 					if err != nil {
 						showGroup := usingGroup

@@ -93,7 +93,7 @@ const renderGroupColumn = (text, record, t, groupRatios = {}) => {
     return (
       <Tooltip
         content={t(
-          '当前分组为 auto，会自动选择最优分组，当一个组不可用时自动降级到下一个组（熔断机制）',
+          'auto 会按 free -> plus -> pro 顺序选择可用池组，并按实际命中的池组倍率扣费',
         )}
         position='top'
       >

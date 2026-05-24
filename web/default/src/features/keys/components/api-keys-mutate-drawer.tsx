@@ -332,6 +332,15 @@ export function ApiKeysMutateDrawer({
                         placeholder={t('Select a group')}
                       />
                     </FormControl>
+                    <FormDescription>
+                      {selectedGroup === 'auto'
+                        ? t(
+                            'Auto uses free -> plus -> pro in order and bills by the actual group used.'
+                          )
+                        : t(
+                            'The selected group controls the resource pool and billing multiplier for this API key.'
+                          )}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

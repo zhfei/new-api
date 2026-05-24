@@ -119,6 +119,7 @@ nano docker-compose.yml
 
 # 启动服务
 docker-compose up -d
+docker compose up --build
 ```
 
 <details>

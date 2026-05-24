@@ -404,6 +404,10 @@ func ensureSubscriptionPlanTableSQLite() error {
 ` + "`total_amount`" + ` bigint NOT NULL DEFAULT 0,
 ` + "`quota_reset_period`" + ` varchar(16) DEFAULT 'never',
 ` + "`quota_reset_custom_seconds`" + ` bigint DEFAULT 0,
+` + "`product_type`" + ` varchar(32) DEFAULT '',
+` + "`pool_group`" + ` varchar(64) DEFAULT '',
+` + "`display_badge`" + ` varchar(64) DEFAULT '',
+` + "`metadata`" + ` text,
 ` + "`created_at`" + ` bigint,
 ` + "`updated_at`" + ` bigint,
 PRIMARY KEY (` + "`id`" + `)
@@ -437,6 +441,10 @@ PRIMARY KEY (` + "`id`" + `)
 		{Name: "total_amount", DDL: "`total_amount` bigint NOT NULL DEFAULT 0"},
 		{Name: "quota_reset_period", DDL: "`quota_reset_period` varchar(16) DEFAULT 'never'"},
 		{Name: "quota_reset_custom_seconds", DDL: "`quota_reset_custom_seconds` bigint DEFAULT 0"},
+		{Name: "product_type", DDL: "`product_type` varchar(32) DEFAULT ''"},
+		{Name: "pool_group", DDL: "`pool_group` varchar(64) DEFAULT ''"},
+		{Name: "display_badge", DDL: "`display_badge` varchar(64) DEFAULT ''"},
+		{Name: "metadata", DDL: "`metadata` text"},
 		{Name: "created_at", DDL: "`created_at` bigint"},
 		{Name: "updated_at", DDL: "`updated_at` bigint"},
 	}

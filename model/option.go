@@ -122,6 +122,9 @@ func InitOptionMap() {
 	common.OptionMap["Chats"] = setting.Chats2JsonString()
 	common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
 	common.OptionMap["DefaultUseAutoGroup"] = strconv.FormatBool(setting.DefaultUseAutoGroup)
+	common.OptionMap["OneCardEnabled"] = strconv.FormatBool(setting.OneCardEnabled())
+	common.OptionMap["SubscriptionFirstGroups"] = setting.SubscriptionFirstGroups2JsonString()
+	common.OptionMap["OfficialPriceRequiredGroups"] = setting.OfficialPriceRequiredGroups2JsonString()
 	common.OptionMap["PayMethods"] = operation_setting.PayMethods2JsonString()
 	common.OptionMap["GitHubClientId"] = ""
 	common.OptionMap["GitHubClientSecret"] = ""
@@ -196,6 +199,30 @@ func loadOptionsFromDatabase() {
 			common.SysLog("failed to update option map: " + err.Error())
 		}
 	}
+	ensureOneCardRuntimeDefaults()
+}
+
+func ensureOneCardRuntimeDefaults() {
+	if !setting.OneCardEnabled() {
+		return
+	}
+	autoGroupsChanged := false
+	if !setting.ValidateOneCardAutoGroups(setting.GetAutoGroups()) {
+		autoGroupsChanged = setting.EnsureAutoGroups(setting.RequiredOneCardAutoGroups())
+	}
+	groupRatiosChanged := ratio_setting.EnsureDefaultGroupRatios("free", "plus", "pro")
+
+	if !autoGroupsChanged && !groupRatiosChanged {
+		return
+	}
+	common.OptionMapRWMutex.Lock()
+	if autoGroupsChanged {
+		common.OptionMap["AutoGroups"] = setting.AutoGroups2JsonString()
+	}
+	if groupRatiosChanged {
+		common.OptionMap["GroupRatio"] = ratio_setting.GroupRatio2JSONString()
+	}
+	common.OptionMapRWMutex.Unlock()
 }
 
 func SyncOptions(frequency int) {
@@ -207,6 +234,9 @@ func SyncOptions(frequency int) {
 }
 
 func UpdateOption(key string, value string) error {
+	if key == "OneCardEnabled" {
+		value = "true"
+	}
 	// Save to database first
 	option := Option{
 		Key: key,
@@ -223,6 +253,9 @@ func UpdateOption(key string, value string) error {
 }
 
 func updateOptionMap(key string, value string) (err error) {
+	if key == "OneCardEnabled" {
+		value = "true"
+	}
 	common.OptionMapRWMutex.Lock()
 	defer common.OptionMapRWMutex.Unlock()
 	common.OptionMap[key] = value
@@ -327,6 +360,8 @@ func updateOptionMap(key string, value string) (err error) {
 			system_setting.WorkerAllowHttpImageRequestEnabled = boolValue
 		case "DefaultUseAutoGroup":
 			setting.DefaultUseAutoGroup = boolValue
+		case "OneCardEnabled":
+			setting.SetOneCardEnabled(boolValue)
 		case "ExposeRatioEnabled":
 			ratio_setting.SetExposeRatioEnabled(boolValue)
 		}
@@ -357,6 +392,10 @@ func updateOptionMap(key string, value string) (err error) {
 		err = setting.UpdateChatsByJsonString(value)
 	case "AutoGroups":
 		err = setting.UpdateAutoGroupsByJsonString(value)
+	case "SubscriptionFirstGroups":
+		err = setting.UpdateSubscriptionFirstGroupsByJSONString(value)
+	case "OfficialPriceRequiredGroups":
+		err = setting.UpdateOfficialPriceRequiredGroupsByJSONString(value)
 	case "CustomCallbackAddress":
 		operation_setting.CustomCallbackAddress = value
 	case "EpayId":

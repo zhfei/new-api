@@ -56,6 +56,7 @@ const ChannelsActions = ({
   activePage,
   pageSize,
   setActivePage,
+  setShowOneCardImportModal,
   t,
 }) => {
   return (
@@ -95,6 +96,16 @@ const ChannelsActions = ({
             trigger='click'
             render={
               <Dropdown.Menu>
+                <Dropdown.Item>
+                  <Button
+                    size='small'
+                    type='secondary'
+                    className='w-full'
+                    onClick={() => setShowOneCardImportModal?.(true)}
+                  >
+                    OneCard {t('导入账号')}
+                  </Button>
+                </Dropdown.Item>
                 <Dropdown.Item>
                   <Button
                     size='small'

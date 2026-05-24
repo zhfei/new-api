@@ -51,6 +51,23 @@ func isVisiblePublicKeyOption(key string) bool {
 	}
 }
 
+func validateOneCardRequiredGroupRatios(groupRatioJSON string) error {
+	var groupRatios map[string]float64
+	if err := common.UnmarshalJsonStr(groupRatioJSON, &groupRatios); err != nil {
+		return err
+	}
+	for _, group := range []string{"free", "plus", "pro"} {
+		ratio, ok := groupRatios[group]
+		if !ok {
+			return fmt.Errorf("一卡通启用时 GroupRatio 必须配置 %s 分组倍率", group)
+		}
+		if ratio <= 0 {
+			return fmt.Errorf("一卡通启用时 GroupRatio 的 %s 分组倍率必须大于 0", group)
+		}
+	}
+	return nil
+}
+
 func collectModelNamesFromOptionValue(raw string, modelNames map[string]struct{}) {
 	if strings.TrimSpace(raw) == "" {
 		return
@@ -136,19 +153,10 @@ func UpdateOption(c *gin.Context) {
 		})
 		return
 	}
-	switch option.Value.(type) {
-	case bool:
-		option.Value = common.Interface2String(option.Value.(bool))
-	case float64:
-		option.Value = common.Interface2String(option.Value.(float64))
-	case int:
-		option.Value = common.Interface2String(option.Value.(int))
-	default:
-		option.Value = fmt.Sprintf("%v", option.Value)
-	}
+	optionValue := common.Interface2String(option.Value)
 	switch option.Key {
 	case "QuotaForInviter", "QuotaForInvitee":
-		if isPositiveOptionValue(option.Value.(string)) && !operation_setting.IsPaymentComplianceConfirmed() {
+		if isPositiveOptionValue(optionValue) && !operation_setting.IsPaymentComplianceConfirmed() {
 			common.ApiErrorI18n(c, i18n.MsgPaymentComplianceRequired)
 			return
 		}
@@ -160,7 +168,7 @@ func UpdateOption(c *gin.Context) {
 	}
 	switch option.Key {
 	case "GitHubOAuthEnabled":
-		if option.Value == "true" && common.GitHubClientId == "" {
+		if optionValue == "true" && common.GitHubClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 GitHub OAuth，请先填入 GitHub Client Id 以及 GitHub Client Secret！",
@@ -168,7 +176,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "discord.enabled":
-		if option.Value == "true" && system_setting.GetDiscordSettings().ClientId == "" {
+		if optionValue == "true" && system_setting.GetDiscordSettings().ClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 Discord OAuth，请先填入 Discord Client Id 以及 Discord Client Secret！",
@@ -176,7 +184,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "oidc.enabled":
-		if option.Value == "true" && system_setting.GetOIDCSettings().ClientId == "" {
+		if optionValue == "true" && system_setting.GetOIDCSettings().ClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 OIDC 登录，请先填入 OIDC Client Id 以及 OIDC Client Secret！",
@@ -184,7 +192,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "LinuxDOOAuthEnabled":
-		if option.Value == "true" && common.LinuxDOClientId == "" {
+		if optionValue == "true" && common.LinuxDOClientId == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 LinuxDO OAuth，请先填入 LinuxDO Client Id 以及 LinuxDO Client Secret！",
@@ -192,7 +200,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "EmailDomainRestrictionEnabled":
-		if option.Value == "true" && len(common.EmailDomainWhitelist) == 0 {
+		if optionValue == "true" && len(common.EmailDomainWhitelist) == 0 {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用邮箱域名限制，请先填入限制的邮箱域名！",
@@ -200,7 +208,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "WeChatAuthEnabled":
-		if option.Value == "true" && common.WeChatServerAddress == "" {
+		if optionValue == "true" && common.WeChatServerAddress == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用微信登录，请先填入微信登录相关配置信息！",
@@ -208,7 +216,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "TurnstileCheckEnabled":
-		if option.Value == "true" && common.TurnstileSiteKey == "" {
+		if optionValue == "true" && common.TurnstileSiteKey == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 Turnstile 校验，请先填入 Turnstile 校验相关配置信息！",
@@ -217,7 +225,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "TelegramOAuthEnabled":
-		if option.Value == "true" && common.TelegramBotToken == "" {
+		if optionValue == "true" && common.TelegramBotToken == "" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无法启用 Telegram OAuth，请先填入 Telegram Bot Token！",
@@ -225,7 +233,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "theme.frontend":
-		if option.Value != "default" && option.Value != "classic" {
+		if optionValue != "default" && optionValue != "classic" {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "无效的主题值，可选值：default（新版前端）、classic（经典前端）",
@@ -233,7 +241,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "GroupRatio":
-		err = ratio_setting.CheckGroupRatio(option.Value.(string))
+		err = ratio_setting.CheckGroupRatio(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -241,8 +249,57 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+		if setting.OneCardEnabled() {
+			if err = validateOneCardRequiredGroupRatios(optionValue); err != nil {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": err.Error(),
+				})
+				return
+			}
+		}
+	case "OneCardEnabled":
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "一卡通业务，禁止关闭",
+		})
+		return
+	case "AutoGroups":
+		var groups []string
+		if err = common.UnmarshalJsonStr(optionValue, &groups); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "自动分组设置失败: " + err.Error(),
+			})
+			return
+		}
+		if setting.OneCardEnabled() && !setting.ValidateOneCardAutoGroups(groups) {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "一卡通启用时 AutoGroups 必须为 [\"free\", \"plus\", \"pro\"]",
+			})
+			return
+		}
+	case "SubscriptionFirstGroups":
+		err = setting.UpdateSubscriptionFirstGroupsByJSONString(optionValue)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "订阅优先分组设置失败: " + err.Error(),
+			})
+			return
+		}
+	case "OfficialPriceRequiredGroups":
+		err = setting.UpdateOfficialPriceRequiredGroupsByJSONString(optionValue)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "官方价格强校验分组设置失败: " + err.Error(),
+			})
+			return
+		}
 	case "ImageRatio":
-		err = ratio_setting.UpdateImageRatioByJSONString(option.Value.(string))
+		err = ratio_setting.UpdateImageRatioByJSONString(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -251,7 +308,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "AudioRatio":
-		err = ratio_setting.UpdateAudioRatioByJSONString(option.Value.(string))
+		err = ratio_setting.UpdateAudioRatioByJSONString(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -260,7 +317,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "AudioCompletionRatio":
-		err = ratio_setting.UpdateAudioCompletionRatioByJSONString(option.Value.(string))
+		err = ratio_setting.UpdateAudioCompletionRatioByJSONString(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -269,7 +326,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "CreateCacheRatio":
-		err = ratio_setting.UpdateCreateCacheRatioByJSONString(option.Value.(string))
+		err = ratio_setting.UpdateCreateCacheRatioByJSONString(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -278,7 +335,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "ModelRequestRateLimitGroup":
-		err = setting.CheckModelRequestRateLimitGroup(option.Value.(string))
+		err = setting.CheckModelRequestRateLimitGroup(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -287,7 +344,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "AutomaticDisableStatusCodes":
-		_, err = operation_setting.ParseHTTPStatusCodeRanges(option.Value.(string))
+		_, err = operation_setting.ParseHTTPStatusCodeRanges(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -296,7 +353,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "AutomaticRetryStatusCodes":
-		_, err = operation_setting.ParseHTTPStatusCodeRanges(option.Value.(string))
+		_, err = operation_setting.ParseHTTPStatusCodeRanges(optionValue)
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -305,7 +362,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "console_setting.api_info":
-		err = console_setting.ValidateConsoleSettings(option.Value.(string), "ApiInfo")
+		err = console_setting.ValidateConsoleSettings(optionValue, "ApiInfo")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -314,7 +371,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "console_setting.announcements":
-		err = console_setting.ValidateConsoleSettings(option.Value.(string), "Announcements")
+		err = console_setting.ValidateConsoleSettings(optionValue, "Announcements")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -323,7 +380,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "console_setting.faq":
-		err = console_setting.ValidateConsoleSettings(option.Value.(string), "FAQ")
+		err = console_setting.ValidateConsoleSettings(optionValue, "FAQ")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -332,7 +389,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	case "console_setting.uptime_kuma_groups":
-		err = console_setting.ValidateConsoleSettings(option.Value.(string), "UptimeKumaGroups")
+		err = console_setting.ValidateConsoleSettings(optionValue, "UptimeKumaGroups")
 		if err != nil {
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
@@ -341,7 +398,7 @@ func UpdateOption(c *gin.Context) {
 			return
 		}
 	}
-	err = model.UpdateOption(option.Key, option.Value.(string))
+	err = model.UpdateOption(option.Key, optionValue)
 	if err != nil {
 		common.ApiError(c, err)
 		return

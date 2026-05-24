@@ -26,6 +26,8 @@ import type {
   SubscriptionPayResponse,
   SubscriptionPayRequest,
   SelfSubscriptionData,
+  SubscriptionOrdersPage,
+  OneCardStatsData,
 } from './types'
 
 // ============================================================================
@@ -59,6 +61,25 @@ export async function patchPlanStatus(
   const res = await api.patch(`/api/subscription/admin/plans/${id}`, {
     enabled,
   })
+  return res.data
+}
+
+export async function getAdminSubscriptionOrders(params?: {
+  p?: number
+  page_size?: number
+  status?: string
+  payment_provider?: string
+  user_id?: number
+  plan_id?: number
+}): Promise<ApiResponse<SubscriptionOrdersPage>> {
+  const res = await api.get('/api/subscription/admin/orders', { params })
+  return res.data
+}
+
+export async function getAdminOneCardStats(): Promise<
+  ApiResponse<OneCardStatsData>
+> {
+  const res = await api.get('/api/subscription/admin/onecard/stats')
   return res.data
 }
 

@@ -162,6 +162,8 @@ func SetApiRouter(router *gin.Engine) {
 			subscriptionAdminRoute.POST("/plans", controller.AdminCreateSubscriptionPlan)
 			subscriptionAdminRoute.PUT("/plans/:id", controller.AdminUpdateSubscriptionPlan)
 			subscriptionAdminRoute.PATCH("/plans/:id", controller.AdminUpdateSubscriptionPlanStatus)
+			subscriptionAdminRoute.GET("/orders", controller.AdminListSubscriptionOrders)
+			subscriptionAdminRoute.GET("/onecard/stats", controller.AdminGetOneCardStats)
 			subscriptionAdminRoute.POST("/bind", controller.AdminBindSubscription)
 
 			// User subscription management (admin)
@@ -222,6 +224,8 @@ func SetApiRouter(router *gin.Engine) {
 			channelRoute.GET("/search", controller.SearchChannels)
 			channelRoute.GET("/models", controller.ChannelListModels)
 			channelRoute.GET("/models_enabled", controller.EnabledListModels)
+			channelRoute.GET("/onecard/health", controller.GetOneCardPoolHealth)
+			channelRoute.POST("/onecard/import", controller.ImportOneCardChannels)
 			channelRoute.GET("/:id", controller.GetChannel)
 			channelRoute.POST("/:id/key", middleware.RootAuth(), middleware.CriticalRateLimit(), middleware.DisableCache(), middleware.SecureVerificationRequired(), controller.GetChannelKey)
 			channelRoute.GET("/test", controller.TestAllChannels)

@@ -565,6 +565,14 @@ export function DetailsDialog(props: DetailsDialogProps) {
                 />
               )}
 
+              {(other?.requested_group || other?.using_group) && (
+                <DetailRow
+                  label={t('Pool Route')}
+                  value={`${other?.requested_group || '-'} -> ${other?.using_group || '-'}`}
+                  mono
+                />
+              )}
+
               {showAdminIp && (
                 <DetailRow
                   label={t('IP Address')}

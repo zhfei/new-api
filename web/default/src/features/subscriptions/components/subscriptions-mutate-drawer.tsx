@@ -51,6 +51,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { createPlan, updatePlan, getGroups } from '../api'
 import { getDurationUnitOptions, getResetPeriodOptions } from '../constants'
 import {
@@ -132,6 +133,13 @@ export function SubscriptionsMutateDrawer({
 
   const durationUnitOpts = getDurationUnitOptions(t)
   const resetPeriodOpts = getResetPeriodOptions(t)
+  const productTypeOptions = [
+    { value: '__none__', label: t('Normal Subscription') },
+    { value: 'day_card', label: t('Daily Card') },
+    { value: 'week_card', label: t('Weekly Card') },
+    { value: 'month_card', label: t('Monthly Card') },
+  ]
+  const poolGroupOptions = ['free', 'plus', 'pro', 'auto']
 
   return (
     <Sheet
@@ -348,6 +356,130 @@ export function SubscriptionsMutateDrawer({
                       <FormLabel className='!mt-0'>
                         {t('Enabled Status')}
                       </FormLabel>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                <FormField
+                  control={form.control}
+                  name='product_type'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Product Type')}</FormLabel>
+                      <Select
+                        items={productTypeOptions}
+                        onValueChange={(v) =>
+                          field.onChange(v === '__none__' ? '' : v)
+                        }
+                        value={field.value || '__none__'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            {productTypeOptions.map((o) => (
+                              <SelectItem key={o.value} value={o.value}>
+                                {o.label}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t(
+                          'OneCard day/week/month cards must use custom reset 86400 seconds.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='pool_group'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Default Display Pool')}</FormLabel>
+                      <Select
+                        items={[
+                          { value: '__none__', label: t('No Pool') },
+                          ...poolGroupOptions.map((g) => ({
+                            value: g,
+                            label: g,
+                          })),
+                        ]}
+                        onValueChange={(v) =>
+                          field.onChange(v === '__none__' ? '' : v)
+                        }
+                        value={field.value || '__none__'}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent alignItemWithTrigger={false}>
+                          <SelectGroup>
+                            <SelectItem value='__none__'>
+                              {t('No Pool')}
+                            </SelectItem>
+                            {poolGroupOptions.map((g) => (
+                              <SelectItem key={g} value={g}>
+                                {g}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>
+                        {t('Only controls product display, not API key group.')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
+                <FormField
+                  control={form.control}
+                  name='display_badge'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Display Badge')}</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder='OneCard' />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name='metadata'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Metadata')}</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={2}
+                          placeholder='["24h reset", "free -> plus -> pro"]'
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t(
+                          'Shown on user purchase cards. Supports plain text, JSON array, or benefits/features/selling_points fields.'
+                        )}
+                      </FormDescription>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />

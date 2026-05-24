@@ -8,8 +8,10 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/config"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/QuantumNous/new-api/types"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -59,4 +61,39 @@ func TestModelPriceHelperTieredUsesPreloadedRequestInput(t *testing.T) {
 	require.Equal(t, "stream", info.TieredBillingSnapshot.EstimatedTier)
 	require.Equal(t, billing_setting.BillingModeTieredExpr, info.TieredBillingSnapshot.BillingMode)
 	require.Equal(t, common.QuotaPerUnit, info.TieredBillingSnapshot.QuotaPerUnit)
+}
+
+func TestModelPriceHelperRejectsZeroPriceForOneCardRequiredGroup(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	modelPriceBackup := ratio_setting.ModelPrice2JSONString()
+	modelRatioBackup := ratio_setting.ModelRatio2JSONString()
+	oneCardEnabledBackup := setting.OneCardEnabled()
+	officialPriceRequiredGroupsBackup := setting.OfficialPriceRequiredGroups2JsonString()
+	t.Cleanup(func() {
+		require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(modelPriceBackup))
+		require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(modelRatioBackup))
+		setting.SetOneCardEnabled(oneCardEnabledBackup)
+		require.NoError(t, setting.UpdateOfficialPriceRequiredGroupsByJSONString(officialPriceRequiredGroupsBackup))
+	})
+
+	require.NoError(t, ratio_setting.UpdateModelPriceByJSONString(`{"onecard-zero-price-model":0}`))
+	require.NoError(t, ratio_setting.UpdateModelRatioByJSONString(`{}`))
+	setting.SetOneCardEnabled(true)
+	require.NoError(t, setting.UpdateOfficialPriceRequiredGroupsByJSONString(`["free"]`))
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	ctx.Set("group", "free")
+
+	info := &relaycommon.RelayInfo{
+		OriginModelName: "onecard-zero-price-model",
+		TokenGroup:      "free",
+		UserGroup:       "default",
+		UsingGroup:      "free",
+	}
+
+	_, err := ModelPriceHelper(ctx, info, 1000, &types.TokenCountMeta{})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "price")
 }

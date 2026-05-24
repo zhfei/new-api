@@ -20,6 +20,7 @@ For commercial licensing, please contact support@quantumnous.com
 import React, { useMemo, useState } from 'react';
 import {
   Badge,
+  Banner,
   Button,
   Card,
   Divider,
@@ -46,6 +47,52 @@ function getEpayMethods(payMethods = []) {
   return (payMethods || []).filter(
     (m) => m?.type && m.type !== 'stripe' && m.type !== 'creem',
   );
+}
+
+function getProductTypeLabel(productType) {
+  switch (productType) {
+    case 'day_card':
+      return '日卡';
+    case 'week_card':
+      return '周卡';
+    case 'month_card':
+      return '月卡';
+    default:
+      return productType || '';
+  }
+}
+
+function parsePlanMetadataBenefits(metadata) {
+  const raw = String(metadata || '').trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item).trim()).filter(Boolean);
+    }
+    if (parsed && typeof parsed === 'object') {
+      return [
+        parsed.description,
+        parsed.benefits,
+        parsed.features,
+        parsed.selling_points,
+      ].flatMap((value) => {
+        if (Array.isArray(value)) {
+          return value.map((item) => String(item).trim()).filter(Boolean);
+        }
+        if (typeof value === 'string' && value.trim()) {
+          return [value.trim()];
+        }
+        return [];
+      });
+    }
+  } catch (e) {
+    return raw
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 // 提交易支付表单
@@ -374,6 +421,15 @@ const SubscriptionPlansCard = ({
               </Text>
             )}
 
+            <Banner
+              type='info'
+              closeIcon={null}
+              className='!rounded-lg mt-2'
+              description={t(
+                '一卡通扣费顺序：优先使用一张当前剩余额度大于 0 的生效权益卡，按下一次重置时间、卡过期时间、卡 ID 排序；本次请求允许把选中的卡扣成负数；没有可用权益卡时再使用钱包余额。',
+              )}
+            />
+
             {hasAnySubscription ? (
               <>
                 <Divider margin={8} />
@@ -383,9 +439,14 @@ const SubscriptionPlansCard = ({
                     const subscription = sub.subscription;
                     const totalAmount = Number(subscription?.amount_total || 0);
                     const usedAmount = Number(subscription?.amount_used || 0);
+                    const rawRemainAmount = totalAmount - usedAmount;
                     const remainAmount =
                       totalAmount > 0
-                        ? Math.max(0, totalAmount - usedAmount)
+                        ? Math.max(0, rawRemainAmount)
+                        : 0;
+                    const overdraftAmount =
+                      totalAmount > 0
+                        ? Math.max(0, -rawRemainAmount)
                         : 0;
                     const planTitle =
                       planTitleMap.get(subscription?.plan_id) || '';
@@ -454,12 +515,15 @@ const SubscriptionPlansCard = ({
                           {t('总额度')}:{' '}
                           {totalAmount > 0 ? (
                             <Tooltip
-                              content={`${t('原生额度')}：${usedAmount}/${totalAmount} · ${t('剩余')} ${remainAmount}`}
+                              content={`${t('原生额度')}：${usedAmount}/${totalAmount} · ${t('剩余')} ${remainAmount}${overdraftAmount > 0 ? ` · ${t('透支')} ${overdraftAmount}` : ''}`}
                             >
                               <span>
                                 {renderQuota(usedAmount)}/
                                 {renderQuota(totalAmount)} · {t('剩余')}{' '}
                                 {renderQuota(remainAmount)}
+                                {overdraftAmount > 0
+                                  ? ` · ${t('透支')} ${renderQuota(overdraftAmount)}`
+                                  : ''}
                               </span>
                             </Tooltip>
                           ) : (
@@ -471,6 +535,11 @@ const SubscriptionPlansCard = ({
                             </span>
                           )}
                         </div>
+                        {overdraftAmount > 0 && isActive && (
+                          <div className='text-xs text-amber-600 mb-2'>
+                            {t('本周期已透支，将在下一次重置后恢复')}
+                          </div>
+                        )}
                         {!isLast && <Divider margin={12} />}
                       </div>
                     );
@@ -511,6 +580,17 @@ const SubscriptionPlansCard = ({
                     ? null
                     : `${t('额度重置')}: ${formatSubscriptionResetPeriod(plan, t)}`;
                 const planBenefits = [
+                  plan?.product_type
+                    ? {
+                        label: `${t('卡类型')}: ${t(getProductTypeLabel(plan.product_type))}`,
+                      }
+                    : null,
+                  plan?.pool_group
+                    ? { label: `${t('默认展示池组')}: ${plan.pool_group}` }
+                    : null,
+                  plan?.display_badge
+                    ? { label: `${t('标签')}: ${plan.display_badge}` }
+                    : null,
                   {
                     label: `${t('有效期')}: ${formatSubscriptionDuration(plan, t)}`,
                   },
@@ -523,6 +603,9 @@ const SubscriptionPlansCard = ({
                     : { label: totalLabel },
                   limitLabel ? { label: limitLabel } : null,
                   upgradeLabel ? { label: upgradeLabel } : null,
+                  ...parsePlanMetadataBenefits(plan?.metadata).map(
+                    (label) => ({ label }),
+                  ),
                 ].filter(Boolean);
 
                 return (

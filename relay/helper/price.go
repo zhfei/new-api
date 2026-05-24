@@ -9,6 +9,7 @@ import (
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/pkg/billingexpr"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/billing_setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
@@ -30,6 +31,17 @@ func modelPriceNotConfiguredError(modelName string, userId int) error {
 			"Model %s has not been priced by the administrator yet. Please contact the site administrator to enable this model.",
 		modelName, modelName,
 	)
+}
+
+func oneCardPriceRequired(info *relaycommon.RelayInfo) bool {
+	return info != nil && setting.OneCardEnabled() && setting.IsOfficialPriceRequiredGroup(info.TokenGroup)
+}
+
+func validateOneCardPositivePrice(info *relaycommon.RelayInfo, modelName string, value float64) error {
+	if !oneCardPriceRequired(info) || value > 0 {
+		return nil
+	}
+	return modelPriceNotConfiguredError(modelName, info.UserId)
 }
 
 // https://docs.claude.com/en/docs/build-with-claude/prompt-caching#1-hour-cache-duration
@@ -95,12 +107,15 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		modelRatio, success, matchName = ratio_setting.GetModelRatio(info.OriginModelName)
 		if !success {
 			acceptUnsetRatio := false
-			if info.UserSetting.AcceptUnsetRatioModel {
+			if info.UserSetting.AcceptUnsetRatioModel && !oneCardPriceRequired(info) {
 				acceptUnsetRatio = true
 			}
 			if !acceptUnsetRatio {
 				return types.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
 			}
+		}
+		if err := validateOneCardPositivePrice(info, info.OriginModelName, modelRatio); err != nil {
+			return types.PriceData{}, err
 		}
 		completionRatio = ratio_setting.GetCompletionRatio(info.OriginModelName)
 		cacheRatio, _ = ratio_setting.GetCacheRatio(info.OriginModelName)
@@ -114,6 +129,9 @@ func ModelPriceHelper(c *gin.Context, info *relaycommon.RelayInfo, promptTokens 
 		ratio := modelRatio * groupRatioInfo.GroupRatio
 		preConsumedQuota = int(float64(preConsumedTokens) * ratio)
 	} else {
+		if err := validateOneCardPositivePrice(info, info.OriginModelName, modelPrice); err != nil {
+			return types.PriceData{}, err
+		}
 		if meta.ImagePriceRatio != 0 {
 			modelPrice = modelPrice * meta.ImagePriceRatio
 		}
@@ -181,11 +199,14 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types
 			var matchName string
 			modelRatio, ratioSuccess, matchName = ratio_setting.GetModelRatio(info.OriginModelName)
 			acceptUnsetRatio := false
-			if info.UserSetting.AcceptUnsetRatioModel {
+			if info.UserSetting.AcceptUnsetRatioModel && !oneCardPriceRequired(info) {
 				acceptUnsetRatio = true
 			}
 			if !ratioSuccess && !acceptUnsetRatio {
 				return types.PriceData{}, modelPriceNotConfiguredError(matchName, info.UserId)
+			}
+			if err := validateOneCardPositivePrice(info, info.OriginModelName, modelRatio); err != nil {
+				return types.PriceData{}, err
 			}
 		}
 	}
@@ -194,6 +215,9 @@ func ModelPriceHelperPerCall(c *gin.Context, info *relaycommon.RelayInfo) (types
 	freeModel := false
 
 	if usePrice {
+		if err := validateOneCardPositivePrice(info, info.OriginModelName, modelPrice); err != nil {
+			return types.PriceData{}, err
+		}
 		quota = int(modelPrice * common.QuotaPerUnit * groupRatioInfo.GroupRatio)
 		if !operation_setting.GetQuotaSetting().EnableFreeModelPreConsume {
 			if groupRatioInfo.GroupRatio == 0 || modelPrice == 0 {

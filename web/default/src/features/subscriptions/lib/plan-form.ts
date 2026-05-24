@@ -41,6 +41,10 @@ export function getPlanFormSchema(t: TFunction) {
     max_purchase_per_user: z.coerce.number().min(0),
     total_amount: z.coerce.number().min(0),
     upgrade_group: z.string().optional(),
+    product_type: z.string().optional(),
+    pool_group: z.string().optional(),
+    display_badge: z.string().optional(),
+    metadata: z.string().optional(),
     stripe_price_id: z.string().optional(),
     creem_product_id: z.string().optional(),
   })
@@ -62,6 +66,10 @@ export const PLAN_FORM_DEFAULTS: PlanFormValues = {
   max_purchase_per_user: 0,
   total_amount: 0,
   upgrade_group: '',
+  product_type: '',
+  pool_group: '',
+  display_badge: '',
+  metadata: '',
   stripe_price_id: '',
   creem_product_id: '',
 }
@@ -81,6 +89,10 @@ export function planToFormValues(plan: SubscriptionPlan): PlanFormValues {
     max_purchase_per_user: Number(plan.max_purchase_per_user || 0),
     total_amount: Number(plan.total_amount || 0),
     upgrade_group: plan.upgrade_group || '',
+    product_type: plan.product_type || '',
+    pool_group: plan.pool_group || '',
+    display_badge: plan.display_badge || '',
+    metadata: plan.metadata || '',
     stripe_price_id: plan.stripe_price_id || '',
     creem_product_id: plan.creem_product_id || '',
   }
@@ -103,6 +115,10 @@ export function formValuesToPlanPayload(values: PlanFormValues): PlanPayload {
       max_purchase_per_user: Number(values.max_purchase_per_user || 0),
       total_amount: Number(values.total_amount || 0),
       upgrade_group: values.upgrade_group || '',
+      product_type: values.product_type || '',
+      pool_group: values.pool_group || '',
+      display_badge: values.display_badge || '',
+      metadata: values.metadata || '',
     },
   }
 }

@@ -104,43 +104,38 @@ func getChannelQuery(group string, model string, retry int) (*gorm.DB, error) {
 }
 
 func GetChannel(group string, model string, retry int) (*Channel, error) {
+	return GetChannelWithFilter(group, model, retry, nil)
+}
+
+func GetChannelWithFilter(group string, model string, retry int, filter ChannelFilter) (*Channel, error) {
 	var abilities []Ability
 
 	var err error = nil
-	channelQuery, err := getChannelQuery(group, model, retry)
-	if err != nil {
-		return nil, err
-	}
+	channelQuery := DB.Where(commonGroupCol+" = ? and model = ? and enabled = ?", group, model, true)
 	if common.UsingSQLite || common.UsingPostgreSQL {
-		err = channelQuery.Order("weight DESC").Find(&abilities).Error
+		err = channelQuery.Order("priority DESC").Order("weight DESC").Find(&abilities).Error
 	} else {
-		err = channelQuery.Order("weight DESC").Find(&abilities).Error
+		err = channelQuery.Order("priority DESC").Order("weight DESC").Find(&abilities).Error
 	}
 	if err != nil {
 		return nil, err
 	}
-	channel := Channel{}
-	if len(abilities) > 0 {
-		// Randomly choose one
-		weightSum := uint(0)
-		for _, ability_ := range abilities {
-			weightSum += ability_.Weight + 10
-		}
-		// Randomly choose one
-		weight := common.GetRandomInt(int(weightSum))
-		for _, ability_ := range abilities {
-			weight -= int(ability_.Weight) + 10
-			//log.Printf("weight: %d, ability weight: %d", weight, *ability_.Weight)
-			if weight <= 0 {
-				channel.Id = ability_.ChannelId
-				break
-			}
-		}
-	} else {
+	if len(abilities) == 0 {
 		return nil, nil
 	}
-	err = DB.First(&channel, "id = ?", channel.Id).Error
-	return &channel, err
+
+	candidates := make([]*Channel, 0, len(abilities))
+	for _, ability := range abilities {
+		channel := Channel{}
+		if err = DB.First(&channel, "id = ?", ability.ChannelId).Error; err != nil {
+			return nil, err
+		}
+		if filter != nil && !filter(&channel) {
+			continue
+		}
+		candidates = append(candidates, &channel)
+	}
+	return selectRandomChannelFromCandidates(candidates, group, model, retry)
 }
 
 func (channel *Channel) AddAbilities(tx *gorm.DB) error {

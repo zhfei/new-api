@@ -189,6 +189,8 @@ export interface LogOtherData {
   subscription_consumed?: number
   subscription_remain?: number
   subscription_total?: number
+  requested_group?: string
+  using_group?: string
 }
 
 /**

@@ -23,6 +23,7 @@ import CardPro from '../../common/ui/CardPro';
 import SubscriptionsTable from './SubscriptionsTable';
 import SubscriptionsActions from './SubscriptionsActions';
 import SubscriptionsDescription from './SubscriptionsDescription';
+import OneCardAdminOverview from './OneCardAdminOverview';
 import AddEditSubscriptionModal from './modals/AddEditSubscriptionModal';
 import { useSubscriptionsData } from '../../../hooks/subscriptions/useSubscriptionsData';
 import { useIsMobile } from '../../../hooks/common/useIsMobile';
@@ -126,6 +127,7 @@ const SubscriptionsPage = () => {
             className='!rounded-lg mb-3'
           />
         )}
+        <OneCardAdminOverview t={t} />
         <SubscriptionsTable
           {...subscriptionsData}
           enableEpay={enableEpay}

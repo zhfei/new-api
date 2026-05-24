@@ -5,7 +5,9 @@ import (
 )
 
 var autoGroups = []string{
-	"default",
+	"free",
+	"plus",
+	"pro",
 }
 
 var DefaultUseAutoGroup = false
@@ -22,6 +24,23 @@ func ContainsAutoGroup(group string) bool {
 func UpdateAutoGroupsByJsonString(jsonString string) error {
 	autoGroups = make([]string, 0)
 	return common.Unmarshal([]byte(jsonString), &autoGroups)
+}
+
+func EnsureAutoGroups(groups []string) bool {
+	if len(autoGroups) == len(groups) {
+		matched := true
+		for i := range groups {
+			if autoGroups[i] != groups[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return false
+		}
+	}
+	autoGroups = append([]string(nil), groups...)
+	return true
 }
 
 func AutoGroups2JsonString() string {

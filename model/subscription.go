@@ -3,6 +3,7 @@ package model
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -175,8 +176,49 @@ type SubscriptionPlan struct {
 	QuotaResetPeriod        string `json:"quota_reset_period" gorm:"type:varchar(16);default:'never'"`
 	QuotaResetCustomSeconds int64  `json:"quota_reset_custom_seconds" gorm:"type:bigint;default:0"`
 
+	ProductType  string `json:"product_type" gorm:"type:varchar(32);default:''"`
+	PoolGroup    string `json:"pool_group" gorm:"type:varchar(64);default:''"`
+	DisplayBadge string `json:"display_badge" gorm:"type:varchar(64);default:''"`
+	Metadata     string `json:"metadata" gorm:"type:text"`
+
 	CreatedAt int64 `json:"created_at" gorm:"bigint"`
 	UpdatedAt int64 `json:"updated_at" gorm:"bigint"`
+}
+
+func IsOneCardSubscriptionProduct(productType string) bool {
+	switch strings.TrimSpace(productType) {
+	case "day_card", "week_card", "month_card":
+		return true
+	default:
+		return false
+	}
+}
+
+func ValidateOneCardSubscriptionPlan(plan SubscriptionPlan) error {
+	if !IsOneCardSubscriptionProduct(plan.ProductType) {
+		return nil
+	}
+	switch strings.TrimSpace(plan.ProductType) {
+	case "day_card":
+		if plan.DurationUnit != SubscriptionDurationDay || plan.DurationValue != 1 {
+			return errors.New("一卡通日卡必须配置 duration_unit=day 且 duration_value=1")
+		}
+	case "week_card":
+		if plan.DurationUnit != SubscriptionDurationDay || plan.DurationValue != 7 {
+			return errors.New("一卡通周卡必须配置 duration_unit=day 且 duration_value=7")
+		}
+	case "month_card":
+		if plan.DurationUnit != SubscriptionDurationMonth || plan.DurationValue != 1 {
+			return errors.New("一卡通月卡必须配置 duration_unit=month 且 duration_value=1")
+		}
+	}
+	if plan.TotalAmount <= 0 {
+		return errors.New("一卡通日卡/周卡/月卡必须配置 total_amount > 0")
+	}
+	if NormalizeResetPeriod(plan.QuotaResetPeriod) != SubscriptionResetCustom || plan.QuotaResetCustomSeconds != 86400 {
+		return errors.New("一卡通日卡/周卡/月卡必须使用 custom + 86400 秒重置周期")
+	}
+	return nil
 }
 
 func (p *SubscriptionPlan) BeforeCreate(tx *gorm.DB) error {
@@ -444,6 +486,9 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	}
 	if userId <= 0 {
 		return nil, errors.New("invalid user id")
+	}
+	if err := ValidateOneCardSubscriptionPlan(*plan); err != nil {
+		return nil, err
 	}
 	if plan.MaxPurchasePerUser > 0 {
 		var count int64
@@ -1013,6 +1058,12 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 		if len(subs) == 0 {
 			return errors.New("no active subscription")
 		}
+
+		type subscriptionCandidate struct {
+			sub              UserSubscription
+			currentPeriodEnd int64
+		}
+		candidates := make([]subscriptionCandidate, 0, len(subs))
 		for _, candidate := range subs {
 			sub := candidate
 			plan, err := getSubscriptionPlanByIdTx(tx, sub.PlanId)
@@ -1022,10 +1073,31 @@ func PreConsumeUserSubscription(requestId string, userId int, modelName string, 
 			if err := maybeResetUserSubscriptionWithPlanTx(tx, &sub, plan, now); err != nil {
 				return err
 			}
+			currentPeriodEnd := sub.EndTime
+			if sub.NextResetTime > 0 && (currentPeriodEnd == 0 || sub.NextResetTime < currentPeriodEnd) {
+				currentPeriodEnd = sub.NextResetTime
+			}
+			candidates = append(candidates, subscriptionCandidate{
+				sub:              sub,
+				currentPeriodEnd: currentPeriodEnd,
+			})
+		}
+		sort.SliceStable(candidates, func(i, j int) bool {
+			if candidates[i].currentPeriodEnd != candidates[j].currentPeriodEnd {
+				return candidates[i].currentPeriodEnd < candidates[j].currentPeriodEnd
+			}
+			if candidates[i].sub.EndTime != candidates[j].sub.EndTime {
+				return candidates[i].sub.EndTime < candidates[j].sub.EndTime
+			}
+			return candidates[i].sub.Id < candidates[j].sub.Id
+		})
+
+		for _, candidate := range candidates {
+			sub := candidate.sub
 			usedBefore := sub.AmountUsed
 			if sub.AmountTotal > 0 {
 				remain := sub.AmountTotal - usedBefore
-				if remain < amount {
+				if remain <= 0 {
 					continue
 				}
 			}
@@ -1196,9 +1268,6 @@ func PostConsumeUserSubscriptionDelta(userSubscriptionId int, delta int64) error
 		newUsed := sub.AmountUsed + delta
 		if newUsed < 0 {
 			newUsed = 0
-		}
-		if sub.AmountTotal > 0 && newUsed > sub.AmountTotal {
-			return fmt.Errorf("subscription used exceeds total, used=%d total=%d", newUsed, sub.AmountTotal)
 		}
 		sub.AmountUsed = newUsed
 		return tx.Save(&sub).Error

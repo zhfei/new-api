@@ -15,6 +15,7 @@ import (
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/middleware"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/pkg/onecard"
 	perfmetrics "github.com/QuantumNous/new-api/pkg/perf_metrics"
 	"github.com/QuantumNous/new-api/relay"
 	relaycommon "github.com/QuantumNous/new-api/relay/common"
@@ -179,10 +180,11 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 	}()
 
 	retryParam := &service.RetryParam{
-		Ctx:        c,
-		TokenGroup: relayInfo.TokenGroup,
-		ModelName:  relayInfo.OriginModelName,
-		Retry:      common.GetPointer(0),
+		Ctx:         c,
+		TokenGroup:  relayInfo.TokenGroup,
+		ModelName:   relayInfo.OriginModelName,
+		RequestPath: c.Request.URL.Path,
+		Retry:       common.GetPointer(0),
 	}
 	relayInfo.RetryIndex = 0
 	relayInfo.LastError = nil
@@ -193,6 +195,10 @@ func Relay(c *gin.Context, relayFormat types.RelayFormat) {
 		if channelErr != nil {
 			logger.LogError(c, channelErr.Error())
 			newAPIError = channelErr
+			break
+		}
+		if endpointErr := validateOneCardEndpoint(c, relayInfo, channel); endpointErr != nil {
+			newAPIError = endpointErr
 			break
 		}
 
@@ -319,6 +325,28 @@ func getChannel(c *gin.Context, info *relaycommon.RelayInfo, retryParam *service
 		return nil, newAPIError
 	}
 	return channel, nil
+}
+
+func validateOneCardEndpoint(c *gin.Context, info *relaycommon.RelayInfo, channel *model.Channel) *types.NewAPIError {
+	if !setting.OneCardEnabled() || info == nil || channel == nil || !setting.IsOneCardGroup(info.TokenGroup) {
+		return nil
+	}
+	policy := onecard.NewEndpointPolicyRegistry().Match(onecard.ChannelInfo{
+		ID:   channel.Id,
+		Type: channel.Type,
+	})
+	if policy == nil {
+		return nil
+	}
+	if err := policy.ValidateEndpoint(&onecard.RequestContext{
+		TokenGroup: info.TokenGroup,
+		UserGroup:  info.UserGroup,
+		Model:      info.OriginModelName,
+		Path:       c.Request.URL.Path,
+	}, onecard.ChannelInfo{ID: channel.Id, Type: channel.Type}); err != nil {
+		return types.NewErrorWithStatusCode(err, types.ErrorCodeInvalidRequest, http.StatusBadRequest, types.ErrOptionWithSkipRetry())
+	}
+	return nil
 }
 
 func shouldRetry(c *gin.Context, openaiErr *types.NewAPIError, retryTimes int) bool {
@@ -507,10 +535,11 @@ func RelayTask(c *gin.Context) {
 	}()
 
 	retryParam := &service.RetryParam{
-		Ctx:        c,
-		TokenGroup: relayInfo.TokenGroup,
-		ModelName:  relayInfo.OriginModelName,
-		Retry:      common.GetPointer(0),
+		Ctx:         c,
+		TokenGroup:  relayInfo.TokenGroup,
+		ModelName:   relayInfo.OriginModelName,
+		RequestPath: c.Request.URL.Path,
+		Retry:       common.GetPointer(0),
 	}
 
 	for ; retryParam.GetRetry() <= common.RetryTimes; retryParam.IncreaseRetry() {

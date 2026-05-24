@@ -9,7 +9,10 @@ import (
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
+	"github.com/QuantumNous/new-api/setting/ratio_setting"
 
 	"github.com/gin-gonic/gin"
 )
@@ -29,6 +32,33 @@ func buildMaskedTokenResponses(tokens []*model.Token) []*model.Token {
 		maskedTokens = append(maskedTokens, buildMaskedTokenResponse(token))
 	}
 	return maskedTokens
+}
+
+func validateTokenGroupForSave(c *gin.Context, group string) (string, bool) {
+	group = strings.TrimSpace(group)
+	if group == "" {
+		return group, true
+	}
+
+	userGroup := c.GetString("group")
+	if userGroup == "" {
+		userGroup = c.GetString("user_group")
+	}
+
+	if setting.OneCardEnabled() && group == "auto" && !setting.ValidateOneCardAutoGroups(setting.GetAutoGroups()) {
+		common.ApiErrorMsg(c, "一卡通 auto 分组配置错误，AutoGroups 必须为 [\"free\", \"plus\", \"pro\"]")
+		return "", false
+	}
+	if _, ok := service.GetUserUsableGroups(userGroup)[group]; !ok {
+		common.ApiErrorMsg(c, fmt.Sprintf("无权访问 %s 分组", group))
+		return "", false
+	}
+	if group != "auto" && !ratio_setting.ContainsGroupRatio(group) {
+		common.ApiErrorMsg(c, fmt.Sprintf("分组 %s 已被弃用", group))
+		return "", false
+	}
+
+	return group, true
 }
 
 func GetAllTokens(c *gin.Context) {
@@ -201,6 +231,10 @@ func AddToken(c *gin.Context) {
 		})
 		return
 	}
+	group, ok := validateTokenGroupForSave(c, token.Group)
+	if !ok {
+		return
+	}
 	key, err := common.GenerateKey()
 	if err != nil {
 		common.ApiErrorI18n(c, i18n.MsgTokenGenerateFailed)
@@ -219,7 +253,7 @@ func AddToken(c *gin.Context) {
 		ModelLimitsEnabled: token.ModelLimitsEnabled,
 		ModelLimits:        token.ModelLimits,
 		AllowIps:           token.AllowIps,
-		Group:              token.Group,
+		Group:              group,
 		CrossGroupRetry:    token.CrossGroupRetry,
 	}
 	err = cleanToken.Insert()
@@ -297,7 +331,11 @@ func UpdateToken(c *gin.Context) {
 		cleanToken.ModelLimitsEnabled = token.ModelLimitsEnabled
 		cleanToken.ModelLimits = token.ModelLimits
 		cleanToken.AllowIps = token.AllowIps
-		cleanToken.Group = token.Group
+		group, ok := validateTokenGroupForSave(c, token.Group)
+		if !ok {
+			return
+		}
+		cleanToken.Group = group
 		cleanToken.CrossGroupRetry = token.CrossGroupRetry
 	}
 	err = cleanToken.Update()

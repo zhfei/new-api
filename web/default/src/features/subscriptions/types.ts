@@ -38,6 +38,10 @@ export const subscriptionPlanSchema = z.object({
   max_purchase_per_user: z.number(),
   total_amount: z.number(),
   upgrade_group: z.string().optional(),
+  product_type: z.string().optional(),
+  pool_group: z.string().optional(),
+  display_badge: z.string().optional(),
+  metadata: z.string().optional(),
   stripe_price_id: z.string().optional(),
   creem_product_id: z.string().optional(),
 })
@@ -46,6 +50,55 @@ export type SubscriptionPlan = z.infer<typeof subscriptionPlanSchema>
 
 export interface PlanRecord {
   plan: SubscriptionPlan
+}
+
+export interface SubscriptionOrder {
+  id: number
+  user_id: number
+  plan_id: number
+  money: number
+  trade_no: string
+  payment_method: string
+  payment_provider: string
+  status: string
+  create_time: number
+  complete_time: number
+}
+
+export interface SubscriptionOrderUser {
+  id: number
+  username: string
+  display_name?: string
+  email?: string
+}
+
+export interface SubscriptionOrderRecord {
+  order: SubscriptionOrder
+  plan?: SubscriptionPlan
+  user?: SubscriptionOrderUser
+}
+
+export interface SubscriptionOrdersPage {
+  page: number
+  page_size: number
+  total: number
+  items: SubscriptionOrderRecord[]
+}
+
+export interface OneCardProductStats {
+  product_type: string
+  plan_count: number
+  enabled_plan_count: number
+  order_count: number
+  order_revenue: number
+  active_card_count: number
+  active_amount: number
+  active_used: number
+  active_remain: number
+}
+
+export interface OneCardStatsData {
+  items: OneCardProductStats[]
 }
 
 // ============================================================================

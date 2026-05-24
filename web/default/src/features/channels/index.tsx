@@ -22,6 +22,7 @@ import { ChannelsDialogs } from './components/channels-dialogs'
 import { ChannelsPrimaryButtons } from './components/channels-primary-buttons'
 import { ChannelsProvider } from './components/channels-provider'
 import { ChannelsTable } from './components/channels-table'
+import { OneCardPoolHealthCard } from './components/onecard-pool-health-card'
 
 export function Channels() {
   const { t } = useTranslation()
@@ -36,7 +37,10 @@ export function Channels() {
           <ChannelsPrimaryButtons />
         </SectionPageLayout.Actions>
         <SectionPageLayout.Content>
-          <ChannelsTable />
+          <div className='space-y-4'>
+            <OneCardPoolHealthCard />
+            <ChannelsTable />
+          </div>
         </SectionPageLayout.Content>
       </SectionPageLayout>
 

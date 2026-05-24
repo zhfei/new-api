@@ -11,6 +11,9 @@ import (
 
 var defaultGroupRatio = map[string]float64{
 	"default": 1,
+	"free":    1,
+	"plus":    1.2,
+	"pro":     1.5,
 	"vip":     1,
 	"svip":    1,
 }
@@ -66,6 +69,22 @@ func GetGroupRatioSetting() *GroupRatioSetting {
 
 func GetGroupRatioCopy() map[string]float64 {
 	return groupRatioMap.ReadAll()
+}
+
+func EnsureDefaultGroupRatios(names ...string) bool {
+	changed := false
+	for _, name := range names {
+		if _, ok := groupRatioMap.Get(name); ok {
+			continue
+		}
+		defaultValue, ok := defaultGroupRatio[name]
+		if !ok {
+			continue
+		}
+		groupRatioMap.Set(name, defaultValue)
+		changed = true
+	}
+	return changed
 }
 
 func ContainsGroupRatio(name string) bool {

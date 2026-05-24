@@ -409,6 +409,15 @@ const EditTokenModal = (props) => {
                         style={{ width: '100%' }}
                       />
                     )}
+                    <div className='text-xs text-gray-500 mt-1'>
+                      {values.group === 'auto'
+                        ? t(
+                            'auto 会按 free -> plus -> pro 顺序选择可用池组，并按实际命中的池组倍率扣费',
+                          )
+                        : t(
+                            '令牌分组决定该 API Key 使用的资源池和计费倍率',
+                          )}
+                    </div>
                   </Col>
                   <Col
                     span={24}
