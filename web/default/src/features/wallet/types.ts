@@ -54,6 +54,15 @@ export type WaffoPancakePaymentResponse = ApiResponse<
     }
   | string
 >
+export type AlipayF2FPaymentData = {
+  payment_provider: 'alipay_f2f'
+  out_trade_no: string
+  qr_code: string
+  qr_code_data_url?: string
+  status_url: string
+  payment_page_url?: string
+}
+export type AlipayF2FPaymentResponse = ApiResponse<AlipayF2FPaymentData>
 
 /**
  * Creem product configuration
@@ -119,12 +128,16 @@ export interface TopupInfo {
   enable_online_topup: boolean
   /** Whether Stripe topup is enabled */
   enable_stripe_topup: boolean
+  /** Whether Alipay face-to-face topup is enabled */
+  enable_alipay_f2f_topup?: boolean
   /** Available payment methods */
   pay_methods: PaymentMethod[]
   /** Minimum topup amount for online topup */
   min_topup: number
   /** Minimum topup amount for Stripe */
   stripe_min_topup: number
+  /** Minimum topup amount for Alipay face-to-face */
+  alipay_f2f_min_topup?: number
   /** Preset amount options */
   amount_options: number[]
   /** Discount rates by amount */

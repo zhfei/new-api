@@ -39,6 +39,7 @@ import InvitationCard from './InvitationCard';
 import TransferModal from './modals/TransferModal';
 import PaymentConfirmModal from './modals/PaymentConfirmModal';
 import TopupHistoryModal from './modals/TopupHistoryModal';
+import AlipayF2FPaymentModal from './modals/AlipayF2FPaymentModal';
 
 const TopUp = () => {
   const { t } = useTranslation();
@@ -61,6 +62,10 @@ const TopUp = () => {
   const [enableStripeTopUp, setEnableStripeTopUp] = useState(
     statusState?.status?.enable_stripe_topup || false,
   );
+  const [enableAlipayF2FTopUp, setEnableAlipayF2FTopUp] = useState(false);
+  const [alipayF2FMinTopUp, setAlipayF2FMinTopUp] = useState(1);
+  const [alipayF2FPayment, setAlipayF2FPayment] = useState(null);
+  const [alipayF2FOpen, setAlipayF2FOpen] = useState(false);
   const [statusLoading, setStatusLoading] = useState(true);
 
   // Creem 相关状态
@@ -138,6 +143,9 @@ const TopUp = () => {
     if (payment === 'stripe') {
       return getStripeAmount(value);
     }
+    if (payment === 'alipay_f2f') {
+      return getAlipayF2FAmount(value);
+    }
     if (payment === 'waffo_pancake') {
       return getWaffoPancakeAmount(value);
     }
@@ -202,6 +210,11 @@ const TopUp = () => {
         showError(t('管理员未开启 Waffo Pancake 充值！'));
         return;
       }
+    } else if (payment === 'alipay_f2f') {
+      if (!enableAlipayF2FTopUp) {
+        showError(t('管理员未开启支付宝当面付充值！'));
+        return;
+      }
     } else if (payment.startsWith('waffo:')) {
       if (!enableWaffoTopUp) {
         showError(t('管理员未开启 Waffo 充值！'));
@@ -233,6 +246,17 @@ const TopUp = () => {
   };
 
   const onlineTopUp = async () => {
+    if (payWay === 'alipay_f2f') {
+      setConfirmLoading(true);
+      try {
+        await alipayF2FTopUp();
+      } finally {
+        setOpen(false);
+        setConfirmLoading(false);
+      }
+      return;
+    }
+
     if (payWay === 'waffo_pancake') {
       setConfirmLoading(true);
       try {
@@ -408,6 +432,66 @@ const TopUp = () => {
       showError(t('支付请求失败'));
     } finally {
       setPaymentLoading(false);
+    }
+  };
+
+  const alipayF2FTopUp = async () => {
+    const minTopUpValue = Number(alipayF2FMinTopUp || 1);
+    if (topUpCount < minTopUpValue) {
+      showError(t('充值数量不能小于') + minTopUpValue);
+      return;
+    }
+
+    setPaymentLoading(true);
+    try {
+      const res = await API.post('/api/user/alipay-f2f/pay', {
+        amount: parseInt(topUpCount),
+        payment_method: 'alipay_f2f',
+      });
+      if (res !== undefined) {
+        const { message, data } = res.data;
+        if (message === 'success' && data?.qr_code) {
+          setAlipayF2FPayment(data);
+          setAlipayF2FOpen(true);
+        } else {
+          const errorMsg =
+            typeof data === 'string' ? data : message || t('支付请求失败');
+          showError(errorMsg);
+        }
+      } else {
+        showError(res);
+      }
+    } catch (e) {
+      showError(t('支付请求失败'));
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const getAlipayF2FAmount = async (value) => {
+    if (value === undefined) {
+      value = topUpCount;
+    }
+    setAmountLoading(true);
+    try {
+      const res = await API.post('/api/user/alipay-f2f/amount', {
+        amount: parseFloat(value),
+      });
+      if (res !== undefined) {
+        const { message, data } = res.data;
+        if (message === 'success') {
+          setAmount(parseFloat(data));
+        } else {
+          setAmount(0);
+          Toast.error({ content: '错误：' + data, id: 'getAmount' });
+        }
+      } else {
+        showError(res);
+      }
+    } catch (err) {
+      // amount fetch failed silently
+    } finally {
+      setAmountLoading(false);
     }
   };
 
@@ -613,7 +697,7 @@ const TopUp = () => {
               }
 
               if (!method.color) {
-                if (method.type === 'alipay') {
+                if (method.type === 'alipay' || method.type === 'alipay_f2f') {
                   method.color = 'rgba(var(--semi-blue-5), 1)';
                 } else if (method.type === 'wxpay') {
                   method.color = 'rgba(var(--semi-green-5), 1)';
@@ -636,6 +720,7 @@ const TopUp = () => {
           const enableStripeTopUp = data.enable_stripe_topup || false;
           const enableOnlineTopUp = data.enable_online_topup || false;
           const enableCreemTopUp = data.enable_creem_topup || false;
+          const enableAlipayF2FTopUp = data.enable_alipay_f2f_topup || false;
           const enableWaffoTopUp = data.enable_waffo_topup || false;
           const enableWaffoPancakeTopUp =
             data.enable_waffo_pancake_topup || false;
@@ -643,13 +728,17 @@ const TopUp = () => {
             ? data.min_topup
             : enableStripeTopUp
               ? data.stripe_min_topup
-              : enableWaffoTopUp
-                ? data.waffo_min_topup
-                : enableWaffoPancakeTopUp
-                  ? data.waffo_pancake_min_topup
-                  : 1;
+              : enableAlipayF2FTopUp
+                ? data.alipay_f2f_min_topup
+                : enableWaffoTopUp
+                  ? data.waffo_min_topup
+                  : enableWaffoPancakeTopUp
+                    ? data.waffo_pancake_min_topup
+                    : 1;
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
+          setEnableAlipayF2FTopUp(enableAlipayF2FTopUp);
+          setAlipayF2FMinTopUp(data.alipay_f2f_min_topup || 1);
           setEnableCreemTopUp(enableCreemTopUp);
           setEnableWaffoTopUp(enableWaffoTopUp);
           setWaffoPayMethods(data.waffo_pay_methods || []);
@@ -681,8 +770,12 @@ const TopUp = () => {
             setPresetAmounts(generatePresetAmounts(minTopUpValue));
           }
 
-          // 初始化显示实付金额
-          getAmount(minTopUpValue);
+          // 初始化显示实付金额。只有当普通易支付未开启时，才按专用网关计算。
+          if (!enableOnlineTopUp && enableAlipayF2FTopUp) {
+            getAlipayF2FAmount(minTopUpValue);
+          } else {
+            getAmount(minTopUpValue);
+          }
         } catch (e) {
           setPayMethods([]);
         }
@@ -920,6 +1013,18 @@ const TopUp = () => {
         t={t}
       />
 
+      <AlipayF2FPaymentModal
+        t={t}
+        visible={alipayF2FOpen}
+        onCancel={() => setAlipayF2FOpen(false)}
+        payment={alipayF2FPayment}
+        amountLabel={`${t('实付金额')}：${renderAmount()}`}
+        onPaid={async () => {
+          await getUserQuota();
+          setOpenHistory(true);
+        }}
+      />
+
       {/* Creem 充值确认模态框 */}
       <Modal
         title={t('确定要充值 $')}
@@ -954,6 +1059,7 @@ const TopUp = () => {
           t={t}
           enableOnlineTopUp={enableOnlineTopUp}
           enableStripeTopUp={enableStripeTopUp}
+          enableAlipayF2FTopUp={enableAlipayF2FTopUp}
           enableCreemTopUp={enableCreemTopUp}
           creemProducts={creemProducts}
           creemPreTopUp={creemPreTopUp}
@@ -967,7 +1073,12 @@ const TopUp = () => {
           topUpCount={topUpCount}
           minTopUp={minTopUp}
           renderQuotaWithAmount={renderQuotaWithAmount}
-          getAmount={getAmount}
+          getAmount={(value) => {
+            if (!enableOnlineTopUp && enableAlipayF2FTopUp) {
+              return getAlipayF2FAmount(value);
+            }
+            return getAmount(value);
+          }}
           setTopUpCount={setTopUpCount}
           setSelectedPreset={setSelectedPreset}
           renderAmount={renderAmount}

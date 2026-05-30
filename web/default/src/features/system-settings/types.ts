@@ -247,6 +247,19 @@ export type BillingSettings = {
   CreemWebhookSecret: string
   CreemTestMode: boolean
   CreemProducts: string
+  AlipayF2FEnabled: boolean
+  AlipayF2FAppId: string
+  AlipayF2FPrivateKey: string
+  AlipayF2FPublicKey: string
+  AlipayF2FGatewayUrl: string
+  AlipayF2FSandboxEnabled: boolean
+  AlipayF2FTopUpNotifyUrl: string
+  AlipayF2FTopUpReturnUrl: string
+  AlipayF2FSubscriptionNotifyUrl: string
+  AlipayF2FSubscriptionReturnUrl: string
+  AlipayF2FSellerId: string
+  AlipayF2FMinTopUp: number
+  AlipayF2FDisplayName: string
   WaffoEnabled: boolean
   WaffoApiKey: string
   WaffoPrivateKey: string

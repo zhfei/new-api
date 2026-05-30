@@ -160,7 +160,8 @@ export function SubscriptionPlansCard({
 
   const enableStripe = !!topupInfo?.enable_stripe_topup
   const enableCreem = !!topupInfo?.enable_creem_topup
-  const enableOnlineTopUp = !!topupInfo?.enable_online_topup
+  const enableOnlineTopUp =
+    !!topupInfo?.enable_online_topup || !!topupInfo?.enable_alipay_f2f_topup
   const epayMethods = useMemo(
     () => getEpayMethods(topupInfo?.pay_methods),
     [topupInfo?.pay_methods]
@@ -732,6 +733,7 @@ export function SubscriptionPlansCard({
             ? planPurchaseCountMap.get(selectedPlan.plan.id)
             : undefined
         }
+        onPaid={fetchSelfSubscription}
       />
     </>
   )

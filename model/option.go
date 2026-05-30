@@ -90,6 +90,19 @@ func InitOptionMap() {
 	common.OptionMap["CreemProducts"] = setting.CreemProducts
 	common.OptionMap["CreemTestMode"] = strconv.FormatBool(setting.CreemTestMode)
 	common.OptionMap["CreemWebhookSecret"] = setting.CreemWebhookSecret
+	common.OptionMap["AlipayF2FEnabled"] = strconv.FormatBool(setting.AlipayF2FEnabled)
+	common.OptionMap["AlipayF2FAppId"] = setting.AlipayF2FAppId
+	common.OptionMap["AlipayF2FPrivateKey"] = setting.AlipayF2FPrivateKey
+	common.OptionMap["AlipayF2FPublicKey"] = setting.AlipayF2FPublicKey
+	common.OptionMap["AlipayF2FGatewayUrl"] = setting.AlipayF2FGatewayUrl
+	common.OptionMap["AlipayF2FSandboxEnabled"] = strconv.FormatBool(setting.AlipayF2FSandboxEnabled)
+	common.OptionMap["AlipayF2FTopUpNotifyUrl"] = setting.AlipayF2FTopUpNotifyUrl
+	common.OptionMap["AlipayF2FTopUpReturnUrl"] = setting.AlipayF2FTopUpReturnUrl
+	common.OptionMap["AlipayF2FSubscriptionNotifyUrl"] = setting.AlipayF2FSubscriptionNotifyUrl
+	common.OptionMap["AlipayF2FSubscriptionReturnUrl"] = setting.AlipayF2FSubscriptionReturnUrl
+	common.OptionMap["AlipayF2FSellerId"] = setting.AlipayF2FSellerId
+	common.OptionMap["AlipayF2FMinTopUp"] = strconv.Itoa(setting.AlipayF2FMinTopUp)
+	common.OptionMap["AlipayF2FDisplayName"] = setting.AlipayF2FDisplayName
 	common.OptionMap["WaffoEnabled"] = strconv.FormatBool(setting.WaffoEnabled)
 	common.OptionMap["WaffoApiKey"] = setting.WaffoApiKey
 	common.OptionMap["WaffoPrivateKey"] = setting.WaffoPrivateKey
@@ -428,6 +441,32 @@ func updateOptionMap(key string, value string) (err error) {
 		setting.CreemTestMode = value == "true"
 	case "CreemWebhookSecret":
 		setting.CreemWebhookSecret = value
+	case "AlipayF2FEnabled":
+		setting.AlipayF2FEnabled = value == "true"
+	case "AlipayF2FAppId":
+		setting.AlipayF2FAppId = value
+	case "AlipayF2FPrivateKey":
+		setting.AlipayF2FPrivateKey = value
+	case "AlipayF2FPublicKey":
+		setting.AlipayF2FPublicKey = value
+	case "AlipayF2FGatewayUrl":
+		setting.AlipayF2FGatewayUrl = value
+	case "AlipayF2FSandboxEnabled":
+		setting.AlipayF2FSandboxEnabled = value == "true"
+	case "AlipayF2FTopUpNotifyUrl":
+		setting.AlipayF2FTopUpNotifyUrl = value
+	case "AlipayF2FTopUpReturnUrl":
+		setting.AlipayF2FTopUpReturnUrl = value
+	case "AlipayF2FSubscriptionNotifyUrl":
+		setting.AlipayF2FSubscriptionNotifyUrl = value
+	case "AlipayF2FSubscriptionReturnUrl":
+		setting.AlipayF2FSubscriptionReturnUrl = value
+	case "AlipayF2FSellerId":
+		setting.AlipayF2FSellerId = value
+	case "AlipayF2FMinTopUp":
+		setting.AlipayF2FMinTopUp, _ = strconv.Atoi(value)
+	case "AlipayF2FDisplayName":
+		setting.AlipayF2FDisplayName = value
 	case "WaffoEnabled":
 		setting.WaffoEnabled = value == "true"
 	case "WaffoApiKey":

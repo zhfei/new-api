@@ -21,14 +21,17 @@ import i18next from 'i18next'
 import { toast } from 'sonner'
 import {
   calculateAmount,
+  calculateAlipayF2FAmount,
   calculateStripeAmount,
   calculateWaffoPancakeAmount,
+  requestAlipayF2FPayment,
   requestPayment,
   requestStripePayment,
   isApiSuccess,
 } from '../api'
 import {
   isStripePayment,
+  isAlipayF2FPayment,
   isWaffoPancakePayment,
   submitPaymentForm,
 } from '../lib'
@@ -49,12 +52,15 @@ export function usePayment() {
         setCalculating(true)
 
         const isStripe = isStripePayment(paymentType)
+        const isAlipayF2F = isAlipayF2FPayment(paymentType)
         const isPancake = isWaffoPancakePayment(paymentType)
         const response = isStripe
           ? await calculateStripeAmount({ amount: topupAmount })
-          : isPancake
-            ? await calculateWaffoPancakeAmount({ amount: topupAmount })
-            : await calculateAmount({ amount: topupAmount })
+          : isAlipayF2F
+            ? await calculateAlipayF2FAmount({ amount: topupAmount })
+            : isPancake
+              ? await calculateWaffoPancakeAmount({ amount: topupAmount })
+              : await calculateAmount({ amount: topupAmount })
 
         if (isApiSuccess(response) && response.data) {
           const calculatedAmount = parseFloat(response.data)
@@ -127,12 +133,33 @@ export function usePayment() {
     []
   )
 
+  const processAlipayF2FPayment = useCallback(async (topupAmount: number) => {
+    try {
+      setProcessing(true)
+      const response = await requestAlipayF2FPayment({
+        amount: Math.floor(topupAmount),
+        payment_method: 'alipay_f2f',
+      })
+      if (!isApiSuccess(response) || !response.data?.qr_code) {
+        toast.error(response.message || i18next.t('Payment request failed'))
+        return null
+      }
+      return response.data
+    } catch {
+      toast.error(i18next.t('Payment request failed'))
+      return null
+    } finally {
+      setProcessing(false)
+    }
+  }, [])
+
   return {
     amount,
     calculating,
     processing,
     calculatePaymentAmount,
     processPayment,
+    processAlipayF2FPayment,
     setAmount,
   }
 }

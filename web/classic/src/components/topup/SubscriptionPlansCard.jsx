@@ -35,6 +35,7 @@ import { API, showError, showSuccess, renderQuota } from '../../helpers';
 import { getCurrencyConfig } from '../../helpers/render';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
+import AlipayF2FPaymentModal from './modals/AlipayF2FPaymentModal';
 import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
@@ -136,6 +137,9 @@ const SubscriptionPlansCard = ({
   const [paying, setPaying] = useState(false);
   const [selectedEpayMethod, setSelectedEpayMethod] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [alipayF2FPayment, setAlipayF2FPayment] = useState(null);
+  const [alipayF2FOpen, setAlipayF2FOpen] = useState(false);
+  const [alipayF2FAmountLabel, setAlipayF2FAmountLabel] = useState('');
 
   const epayMethods = useMemo(() => getEpayMethods(payMethods), [payMethods]);
 
@@ -223,6 +227,26 @@ const SubscriptionPlansCard = ({
     }
     setPaying(true);
     try {
+      if (selectedEpayMethod === 'alipay_f2f') {
+        const res = await API.post('/api/subscription/alipay-f2f/pay', {
+          plan_id: selectedPlan.plan.id,
+          payment_method: selectedEpayMethod,
+        });
+        if (res.data?.message === 'success' && res.data?.data?.qr_code) {
+          setAlipayF2FPayment(res.data.data);
+          setAlipayF2FAmountLabel(`${t('应付金额')}：${symbol}${displayPrice}`);
+          setAlipayF2FOpen(true);
+          closeBuy();
+        } else {
+          const errorMsg =
+            typeof res.data?.data === 'string'
+              ? res.data.data
+              : res.data?.message || t('支付失败');
+          showError(errorMsg);
+        }
+        return;
+      }
+
       const res = await API.post('/api/subscription/epay/pay', {
         plan_id: selectedPlan.plan.id,
         payment_method: selectedEpayMethod,
@@ -441,13 +465,9 @@ const SubscriptionPlansCard = ({
                     const usedAmount = Number(subscription?.amount_used || 0);
                     const rawRemainAmount = totalAmount - usedAmount;
                     const remainAmount =
-                      totalAmount > 0
-                        ? Math.max(0, rawRemainAmount)
-                        : 0;
+                      totalAmount > 0 ? Math.max(0, rawRemainAmount) : 0;
                     const overdraftAmount =
-                      totalAmount > 0
-                        ? Math.max(0, -rawRemainAmount)
-                        : 0;
+                      totalAmount > 0 ? Math.max(0, -rawRemainAmount) : 0;
                     const planTitle =
                       planTitleMap.get(subscription?.plan_id) || '';
                     const remainDays = getRemainingDays(sub);
@@ -465,7 +485,9 @@ const SubscriptionPlansCard = ({
                           <div className='flex items-center gap-2'>
                             <span className='font-medium'>
                               {planTitle
-                                ? `${planTitle} · ${t('订阅')} #${subscription?.id}`
+                                ? `${planTitle} · ${t('订阅')} #${
+                                    subscription?.id
+                                  }`
                                 : `${t('订阅')} #${subscription?.id}`}
                             </span>
                             {isActive ? (
@@ -515,14 +537,24 @@ const SubscriptionPlansCard = ({
                           {t('总额度')}:{' '}
                           {totalAmount > 0 ? (
                             <Tooltip
-                              content={`${t('原生额度')}：${usedAmount}/${totalAmount} · ${t('剩余')} ${remainAmount}${overdraftAmount > 0 ? ` · ${t('透支')} ${overdraftAmount}` : ''}`}
+                              content={`${t(
+                                '原生额度',
+                              )}：${usedAmount}/${totalAmount} · ${t(
+                                '剩余',
+                              )} ${remainAmount}${
+                                overdraftAmount > 0
+                                  ? ` · ${t('透支')} ${overdraftAmount}`
+                                  : ''
+                              }`}
                             >
                               <span>
                                 {renderQuota(usedAmount)}/
                                 {renderQuota(totalAmount)} · {t('剩余')}{' '}
                                 {renderQuota(remainAmount)}
                                 {overdraftAmount > 0
-                                  ? ` · ${t('透支')} ${renderQuota(overdraftAmount)}`
+                                  ? ` · ${t('透支')} ${renderQuota(
+                                      overdraftAmount,
+                                    )}`
                                   : ''}
                               </span>
                             </Tooltip>
@@ -578,11 +610,16 @@ const SubscriptionPlansCard = ({
                 const resetLabel =
                   formatSubscriptionResetPeriod(plan, t) === t('不重置')
                     ? null
-                    : `${t('额度重置')}: ${formatSubscriptionResetPeriod(plan, t)}`;
+                    : `${t('额度重置')}: ${formatSubscriptionResetPeriod(
+                        plan,
+                        t,
+                      )}`;
                 const planBenefits = [
                   plan?.product_type
                     ? {
-                        label: `${t('卡类型')}: ${t(getProductTypeLabel(plan.product_type))}`,
+                        label: `${t('卡类型')}: ${t(
+                          getProductTypeLabel(plan.product_type),
+                        )}`,
                       }
                     : null,
                   plan?.pool_group
@@ -592,7 +629,10 @@ const SubscriptionPlansCard = ({
                     ? { label: `${t('标签')}: ${plan.display_badge}` }
                     : null,
                   {
-                    label: `${t('有效期')}: ${formatSubscriptionDuration(plan, t)}`,
+                    label: `${t('有效期')}: ${formatSubscriptionDuration(
+                      plan,
+                      t,
+                    )}`,
                   },
                   resetLabel ? { label: resetLabel } : null,
                   totalAmount > 0
@@ -603,9 +643,9 @@ const SubscriptionPlansCard = ({
                     : { label: totalLabel },
                   limitLabel ? { label: limitLabel } : null,
                   upgradeLabel ? { label: upgradeLabel } : null,
-                  ...parsePlanMetadataBenefits(plan?.metadata).map(
-                    (label) => ({ label }),
-                  ),
+                  ...parsePlanMetadataBenefits(plan?.metadata).map((label) => ({
+                    label,
+                  })),
                 ].filter(Boolean);
 
                 return (
@@ -767,6 +807,15 @@ const SubscriptionPlansCard = ({
         onPayStripe={payStripe}
         onPayCreem={payCreem}
         onPayEpay={payEpay}
+      />
+
+      <AlipayF2FPaymentModal
+        t={t}
+        visible={alipayF2FOpen}
+        onCancel={() => setAlipayF2FOpen(false)}
+        payment={alipayF2FPayment}
+        amountLabel={alipayF2FAmountLabel}
+        onPaid={reloadSubscriptionSelf}
       />
     </>
   );

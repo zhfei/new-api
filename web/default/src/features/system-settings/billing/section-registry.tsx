@@ -161,6 +161,23 @@ const BILLING_SECTIONS = [
           CreemWebhookSecret: settings.CreemWebhookSecret,
           CreemTestMode: settings.CreemTestMode,
           CreemProducts: settings.CreemProducts,
+          AlipayF2FEnabled: settings.AlipayF2FEnabled ?? false,
+          AlipayF2FAppId: settings.AlipayF2FAppId ?? '',
+          AlipayF2FPrivateKey: settings.AlipayF2FPrivateKey ?? '',
+          AlipayF2FPublicKey: settings.AlipayF2FPublicKey ?? '',
+          AlipayF2FGatewayUrl:
+            settings.AlipayF2FGatewayUrl ??
+            'https://openapi.alipay.com/gateway.do',
+          AlipayF2FSandboxEnabled: settings.AlipayF2FSandboxEnabled ?? false,
+          AlipayF2FTopUpNotifyUrl: settings.AlipayF2FTopUpNotifyUrl ?? '',
+          AlipayF2FTopUpReturnUrl: settings.AlipayF2FTopUpReturnUrl ?? '',
+          AlipayF2FSubscriptionNotifyUrl:
+            settings.AlipayF2FSubscriptionNotifyUrl ?? '',
+          AlipayF2FSubscriptionReturnUrl:
+            settings.AlipayF2FSubscriptionReturnUrl ?? '',
+          AlipayF2FSellerId: settings.AlipayF2FSellerId ?? '',
+          AlipayF2FMinTopUp: settings.AlipayF2FMinTopUp ?? 1,
+          AlipayF2FDisplayName: settings.AlipayF2FDisplayName ?? '支付宝当面付',
         }}
         waffoDefaultValues={{
           WaffoEnabled: settings.WaffoEnabled ?? false,

@@ -23,6 +23,7 @@ import { useStatus } from '@/hooks/use-status'
 import { useSystemConfig } from '@/hooks/use-system-config'
 import { SectionPageLayout } from '@/components/layout'
 import { AffiliateRewardsCard } from './components/affiliate-rewards-card'
+import { AlipayF2FPaymentDialog } from './components/dialogs/alipay-f2f-payment-dialog'
 import { BillingHistoryDialog } from './components/dialogs/billing-history-dialog'
 import { CreemConfirmDialog } from './components/dialogs/creem-confirm-dialog'
 import { PaymentConfirmDialog } from './components/dialogs/payment-confirm-dialog'
@@ -43,9 +44,11 @@ import {
 import {
   getDefaultPaymentType,
   getMinTopupAmount,
+  isAlipayF2FPayment,
   isWaffoPancakePayment,
 } from './lib'
 import type {
+  AlipayF2FPaymentData,
   UserWalletData,
   PaymentMethod,
   PresetAmount,
@@ -70,6 +73,9 @@ export function Wallet(props: WalletProps) {
   const [billingDialogOpen, setBillingDialogOpen] = useState(false)
   const [redemptionCode, setRedemptionCode] = useState('')
   const [creemDialogOpen, setCreemDialogOpen] = useState(false)
+  const [alipayF2FDialogOpen, setAlipayF2FDialogOpen] = useState(false)
+  const [alipayF2FPayment, setAlipayF2FPayment] =
+    useState<AlipayF2FPaymentData | null>(null)
   const [selectedCreemProduct, setSelectedCreemProduct] =
     useState<CreemProduct | null>(null)
   const [showSubscriptionPanel, setShowSubscriptionPanel] = useState(true)
@@ -90,6 +96,7 @@ export function Wallet(props: WalletProps) {
     processing,
     calculatePaymentAmount,
     processPayment,
+    processAlipayF2FPayment,
   } = usePayment()
   const {
     affiliateLink,
@@ -186,6 +193,17 @@ export function Wallet(props: WalletProps) {
     if (!selectedPaymentMethod) return
 
     const isPancake = isWaffoPancakePayment(selectedPaymentMethod.type)
+    const isAlipayF2F = isAlipayF2FPayment(selectedPaymentMethod.type)
+    if (isAlipayF2F) {
+      const payment = await processAlipayF2FPayment(topupAmount)
+      if (payment) {
+        setAlipayF2FPayment(payment)
+        setAlipayF2FDialogOpen(true)
+        setConfirmDialogOpen(false)
+      }
+      return
+    }
+
     const success = isPancake
       ? await processWaffoPancakePayment(topupAmount)
       : await processPayment(topupAmount, selectedPaymentMethod.type)
@@ -360,6 +378,16 @@ export function Wallet(props: WalletProps) {
         onConfirm={handleCreemConfirm}
         product={selectedCreemProduct}
         processing={creemProcessing}
+      />
+
+      <AlipayF2FPaymentDialog
+        open={alipayF2FDialogOpen}
+        onOpenChange={setAlipayF2FDialogOpen}
+        payment={alipayF2FPayment}
+        amountLabel={t('Amount to pay: {{amount}}', {
+          amount: paymentAmount.toFixed(2),
+        })}
+        onPaid={fetchUser}
       />
     </>
   )

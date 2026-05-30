@@ -141,7 +141,12 @@ export function OneCardImportDialog({
           <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>
             <div className='space-y-2'>
               <Label>{t('Pool')}</Label>
-              <Select value={pool} onValueChange={setPool}>
+              <Select
+                value={pool}
+                onValueChange={(value) => {
+                  if (value) setPool(value)
+                }}
+              >
                 <SelectTrigger className='w-full'>
                   <SelectValue />
                 </SelectTrigger>
@@ -159,7 +164,12 @@ export function OneCardImportDialog({
 
             <div className='space-y-2'>
               <Label>{t('Provider')}</Label>
-              <Select value={provider} onValueChange={setProvider}>
+              <Select
+                value={provider}
+                onValueChange={(value) => {
+                  if (value) setProvider(value)
+                }}
+              >
                 <SelectTrigger className='w-full'>
                   <SelectValue />
                 </SelectTrigger>

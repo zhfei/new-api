@@ -38,6 +38,7 @@ import type {
   WaffoPaymentResponse,
   WaffoPancakePaymentRequest,
   WaffoPancakePaymentResponse,
+  AlipayF2FPaymentResponse,
 } from './types'
 
 // ============================================================================
@@ -115,6 +116,24 @@ export async function requestStripePayment(
   request: PaymentRequest
 ): Promise<StripePaymentResponse> {
   const res = await api.post('/api/user/stripe/pay', request, {
+    skipBusinessError: true,
+  } as Record<string, unknown>)
+  return res.data
+}
+
+export async function calculateAlipayF2FAmount(
+  request: AmountRequest
+): Promise<AmountResponse> {
+  const res = await api.post('/api/user/alipay-f2f/amount', request, {
+    skipBusinessError: true,
+  } as Record<string, unknown>)
+  return res.data
+}
+
+export async function requestAlipayF2FPayment(
+  request: PaymentRequest
+): Promise<AlipayF2FPaymentResponse> {
+  const res = await api.post('/api/user/alipay-f2f/pay', request, {
     skipBusinessError: true,
   } as Record<string, unknown>)
   return res.data

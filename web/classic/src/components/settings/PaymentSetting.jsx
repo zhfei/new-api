@@ -25,6 +25,7 @@ import SettingsPaymentGatewayStripe from '../../pages/Setting/Payment/SettingsPa
 import SettingsPaymentGatewayCreem from '../../pages/Setting/Payment/SettingsPaymentGatewayCreem';
 import SettingsPaymentGatewayWaffo from '../../pages/Setting/Payment/SettingsPaymentGatewayWaffo';
 import SettingsPaymentGatewayWaffoPancake from '../../pages/Setting/Payment/SettingsPaymentGatewayWaffoPancake';
+import SettingsPaymentGatewayAlipayF2F from '../../pages/Setting/Payment/SettingsPaymentGatewayAlipayF2F';
 import { API, showError, showSuccess, toBoolean } from '../../helpers';
 import { useTranslation } from 'react-i18next';
 import RiskAcknowledgementModal from '../common/modals/RiskAcknowledgementModal';
@@ -52,6 +53,20 @@ const PaymentSetting = () => {
     StripeUnitPrice: 8.0,
     StripeMinTopUp: 1,
     StripePromotionCodesEnabled: false,
+
+    AlipayF2FEnabled: false,
+    AlipayF2FSandboxEnabled: false,
+    AlipayF2FDisplayName: '支付宝当面付',
+    AlipayF2FAppId: '',
+    AlipayF2FPrivateKey: '',
+    AlipayF2FPublicKey: '',
+    AlipayF2FGatewayUrl: '',
+    AlipayF2FSellerId: '',
+    AlipayF2FMinTopUp: 1,
+    AlipayF2FTopUpNotifyUrl: '',
+    AlipayF2FTopUpReturnUrl: '',
+    AlipayF2FSubscriptionNotifyUrl: '',
+    AlipayF2FSubscriptionReturnUrl: '',
 
     WaffoPancakeEnabled: false,
     WaffoPancakeSandbox: false,
@@ -171,6 +186,7 @@ const PaymentSetting = () => {
           case 'MinTopUp':
           case 'StripeUnitPrice':
           case 'StripeMinTopUp':
+          case 'AlipayF2FMinTopUp':
           case 'WaffoPancakeUnitPrice':
           case 'WaffoPancakeMinTopUp':
             newInputs[item.key] = parseFloat(item.value);
@@ -315,6 +331,13 @@ const PaymentSetting = () => {
               </Tabs.TabPane>
               <Tabs.TabPane tab={t('Creem 设置')} itemKey='creem'>
                 <SettingsPaymentGatewayCreem
+                  options={inputs}
+                  refresh={onRefresh}
+                  hideSectionTitle
+                />
+              </Tabs.TabPane>
+              <Tabs.TabPane tab={t('支付宝当面付设置')} itemKey='alipay-f2f'>
+                <SettingsPaymentGatewayAlipayF2F
                   options={inputs}
                   refresh={onRefresh}
                   hideSectionTitle

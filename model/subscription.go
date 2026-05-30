@@ -592,9 +592,6 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if err != nil {
 			return err
 		}
-		if err := upsertSubscriptionTopUpTx(tx, &order); err != nil {
-			return err
-		}
 		order.Status = common.TopUpStatusSuccess
 		order.CompleteTime = common.GetTimestamp()
 		if providerPayload != "" {
@@ -602,6 +599,9 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		}
 		if actualPaymentMethod != "" && order.PaymentMethod != actualPaymentMethod {
 			order.PaymentMethod = actualPaymentMethod
+		}
+		if err := upsertSubscriptionTopUpTx(tx, &order); err != nil {
+			return err
 		}
 		if err := tx.Save(&order).Error; err != nil {
 			return err
@@ -634,14 +634,16 @@ func upsertSubscriptionTopUpTx(tx *gorm.DB, order *SubscriptionOrder) error {
 	if err := tx.Where("trade_no = ?", order.TradeNo).First(&topup).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			topup = TopUp{
-				UserId:        order.UserId,
-				Amount:        0,
-				Money:         order.Money,
-				TradeNo:       order.TradeNo,
-				PaymentMethod: order.PaymentMethod,
-				CreateTime:    order.CreateTime,
-				CompleteTime:  now,
-				Status:        common.TopUpStatusSuccess,
+				UserId:          order.UserId,
+				Amount:          0,
+				Money:           order.Money,
+				TradeNo:         order.TradeNo,
+				PaymentMethod:   order.PaymentMethod,
+				PaymentProvider: order.PaymentProvider,
+				ProviderPayload: order.ProviderPayload,
+				CreateTime:      order.CreateTime,
+				CompleteTime:    now,
+				Status:          common.TopUpStatusSuccess,
 			}
 			return tx.Create(&topup).Error
 		}
@@ -655,6 +657,14 @@ func upsertSubscriptionTopUpTx(tx *gorm.DB, order *SubscriptionOrder) error {
 	}
 	if topup.CreateTime == 0 {
 		topup.CreateTime = order.CreateTime
+	}
+	if topup.PaymentProvider == "" {
+		topup.PaymentProvider = order.PaymentProvider
+	} else if topup.PaymentProvider != order.PaymentProvider {
+		return ErrPaymentMethodMismatch
+	}
+	if order.ProviderPayload != "" {
+		topup.ProviderPayload = order.ProviderPayload
 	}
 	topup.CompleteTime = now
 	topup.Status = common.TopUpStatusSuccess

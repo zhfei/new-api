@@ -132,6 +132,39 @@ const paymentSchema = z.object({
       })
     }
   }),
+  AlipayF2FEnabled: z.boolean(),
+  AlipayF2FAppId: z.string(),
+  AlipayF2FPrivateKey: z.string(),
+  AlipayF2FPublicKey: z.string(),
+  AlipayF2FGatewayUrl: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid gateway URL starting with http:// or https://'),
+  AlipayF2FSandboxEnabled: z.boolean(),
+  AlipayF2FTopUpNotifyUrl: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid notify URL starting with http:// or https://'),
+  AlipayF2FTopUpReturnUrl: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid return URL starting with http:// or https://'),
+  AlipayF2FSubscriptionNotifyUrl: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid notify URL starting with http:// or https://'),
+  AlipayF2FSubscriptionReturnUrl: z.string().refine((value) => {
+    const trimmed = value.trim()
+    if (!trimmed) return true
+    return /^https?:\/\//.test(trimmed)
+  }, 'Provide a valid return URL starting with http:// or https://'),
+  AlipayF2FSellerId: z.string(),
+  AlipayF2FMinTopUp: z.coerce.number().min(1),
+  AlipayF2FDisplayName: z.string(),
 })
 
 type PaymentFormValues = z.infer<typeof paymentSchema>
@@ -513,6 +546,157 @@ export function PaymentSettingsSection({
     }
   }
 
+  const saveAlipayF2FSettings = async () => {
+    const values = form.getValues()
+    const sanitized = {
+      AlipayF2FEnabled: values.AlipayF2FEnabled as boolean,
+      AlipayF2FAppId: values.AlipayF2FAppId.trim(),
+      AlipayF2FPrivateKey: values.AlipayF2FPrivateKey.trim(),
+      AlipayF2FPublicKey: values.AlipayF2FPublicKey.trim(),
+      AlipayF2FGatewayUrl: removeTrailingSlash(values.AlipayF2FGatewayUrl),
+      AlipayF2FSandboxEnabled: values.AlipayF2FSandboxEnabled as boolean,
+      AlipayF2FTopUpNotifyUrl: removeTrailingSlash(
+        values.AlipayF2FTopUpNotifyUrl
+      ),
+      AlipayF2FTopUpReturnUrl: removeTrailingSlash(
+        values.AlipayF2FTopUpReturnUrl
+      ),
+      AlipayF2FSubscriptionNotifyUrl: removeTrailingSlash(
+        values.AlipayF2FSubscriptionNotifyUrl
+      ),
+      AlipayF2FSubscriptionReturnUrl: removeTrailingSlash(
+        values.AlipayF2FSubscriptionReturnUrl
+      ),
+      AlipayF2FSellerId: values.AlipayF2FSellerId.trim(),
+      AlipayF2FMinTopUp: values.AlipayF2FMinTopUp as number,
+      AlipayF2FDisplayName: values.AlipayF2FDisplayName.trim(),
+    }
+
+    const initial = {
+      AlipayF2FEnabled: initialRef.current.AlipayF2FEnabled,
+      AlipayF2FAppId: initialRef.current.AlipayF2FAppId.trim(),
+      AlipayF2FPrivateKey: initialRef.current.AlipayF2FPrivateKey.trim(),
+      AlipayF2FPublicKey: initialRef.current.AlipayF2FPublicKey.trim(),
+      AlipayF2FGatewayUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FGatewayUrl
+      ),
+      AlipayF2FSandboxEnabled: initialRef.current.AlipayF2FSandboxEnabled,
+      AlipayF2FTopUpNotifyUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FTopUpNotifyUrl
+      ),
+      AlipayF2FTopUpReturnUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FTopUpReturnUrl
+      ),
+      AlipayF2FSubscriptionNotifyUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FSubscriptionNotifyUrl
+      ),
+      AlipayF2FSubscriptionReturnUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FSubscriptionReturnUrl
+      ),
+      AlipayF2FSellerId: initialRef.current.AlipayF2FSellerId.trim(),
+      AlipayF2FMinTopUp: initialRef.current.AlipayF2FMinTopUp,
+      AlipayF2FDisplayName: initialRef.current.AlipayF2FDisplayName.trim(),
+    }
+
+    const updates: Array<{ key: string; value: string | number | boolean }> = []
+
+    if (sanitized.AlipayF2FEnabled !== initial.AlipayF2FEnabled) {
+      updates.push({
+        key: 'AlipayF2FEnabled',
+        value: sanitized.AlipayF2FEnabled,
+      })
+    }
+    if (sanitized.AlipayF2FAppId !== initial.AlipayF2FAppId) {
+      updates.push({ key: 'AlipayF2FAppId', value: sanitized.AlipayF2FAppId })
+    }
+    if (
+      sanitized.AlipayF2FPrivateKey &&
+      sanitized.AlipayF2FPrivateKey !== initial.AlipayF2FPrivateKey
+    ) {
+      updates.push({
+        key: 'AlipayF2FPrivateKey',
+        value: sanitized.AlipayF2FPrivateKey,
+      })
+    }
+    if (
+      sanitized.AlipayF2FPublicKey &&
+      sanitized.AlipayF2FPublicKey !== initial.AlipayF2FPublicKey
+    ) {
+      updates.push({
+        key: 'AlipayF2FPublicKey',
+        value: sanitized.AlipayF2FPublicKey,
+      })
+    }
+    if (sanitized.AlipayF2FGatewayUrl !== initial.AlipayF2FGatewayUrl) {
+      updates.push({
+        key: 'AlipayF2FGatewayUrl',
+        value: sanitized.AlipayF2FGatewayUrl,
+      })
+    }
+    if (sanitized.AlipayF2FSandboxEnabled !== initial.AlipayF2FSandboxEnabled) {
+      updates.push({
+        key: 'AlipayF2FSandboxEnabled',
+        value: sanitized.AlipayF2FSandboxEnabled,
+      })
+    }
+    if (sanitized.AlipayF2FTopUpNotifyUrl !== initial.AlipayF2FTopUpNotifyUrl) {
+      updates.push({
+        key: 'AlipayF2FTopUpNotifyUrl',
+        value: sanitized.AlipayF2FTopUpNotifyUrl,
+      })
+    }
+    if (sanitized.AlipayF2FTopUpReturnUrl !== initial.AlipayF2FTopUpReturnUrl) {
+      updates.push({
+        key: 'AlipayF2FTopUpReturnUrl',
+        value: sanitized.AlipayF2FTopUpReturnUrl,
+      })
+    }
+    if (
+      sanitized.AlipayF2FSubscriptionNotifyUrl !==
+      initial.AlipayF2FSubscriptionNotifyUrl
+    ) {
+      updates.push({
+        key: 'AlipayF2FSubscriptionNotifyUrl',
+        value: sanitized.AlipayF2FSubscriptionNotifyUrl,
+      })
+    }
+    if (
+      sanitized.AlipayF2FSubscriptionReturnUrl !==
+      initial.AlipayF2FSubscriptionReturnUrl
+    ) {
+      updates.push({
+        key: 'AlipayF2FSubscriptionReturnUrl',
+        value: sanitized.AlipayF2FSubscriptionReturnUrl,
+      })
+    }
+    if (sanitized.AlipayF2FSellerId !== initial.AlipayF2FSellerId) {
+      updates.push({
+        key: 'AlipayF2FSellerId',
+        value: sanitized.AlipayF2FSellerId,
+      })
+    }
+    if (sanitized.AlipayF2FMinTopUp !== initial.AlipayF2FMinTopUp) {
+      updates.push({
+        key: 'AlipayF2FMinTopUp',
+        value: sanitized.AlipayF2FMinTopUp,
+      })
+    }
+    if (sanitized.AlipayF2FDisplayName !== initial.AlipayF2FDisplayName) {
+      updates.push({
+        key: 'AlipayF2FDisplayName',
+        value: sanitized.AlipayF2FDisplayName,
+      })
+    }
+
+    if (updates.length === 0) {
+      return
+    }
+
+    for (const update of updates) {
+      await updateOption.mutateAsync(update)
+    }
+  }
+
   const onSubmit = async (values: PaymentFormValues) => {
     const sanitized = {
       PayAddress: removeTrailingSlash(values.PayAddress),
@@ -530,6 +714,27 @@ export function PaymentSettingsSection({
       StripeUnitPrice: values.StripeUnitPrice,
       StripeMinTopUp: values.StripeMinTopUp,
       StripePromotionCodesEnabled: values.StripePromotionCodesEnabled,
+      AlipayF2FEnabled: values.AlipayF2FEnabled,
+      AlipayF2FAppId: values.AlipayF2FAppId.trim(),
+      AlipayF2FPrivateKey: values.AlipayF2FPrivateKey.trim(),
+      AlipayF2FPublicKey: values.AlipayF2FPublicKey.trim(),
+      AlipayF2FGatewayUrl: removeTrailingSlash(values.AlipayF2FGatewayUrl),
+      AlipayF2FSandboxEnabled: values.AlipayF2FSandboxEnabled,
+      AlipayF2FTopUpNotifyUrl: removeTrailingSlash(
+        values.AlipayF2FTopUpNotifyUrl
+      ),
+      AlipayF2FTopUpReturnUrl: removeTrailingSlash(
+        values.AlipayF2FTopUpReturnUrl
+      ),
+      AlipayF2FSubscriptionNotifyUrl: removeTrailingSlash(
+        values.AlipayF2FSubscriptionNotifyUrl
+      ),
+      AlipayF2FSubscriptionReturnUrl: removeTrailingSlash(
+        values.AlipayF2FSubscriptionReturnUrl
+      ),
+      AlipayF2FSellerId: values.AlipayF2FSellerId.trim(),
+      AlipayF2FMinTopUp: values.AlipayF2FMinTopUp,
+      AlipayF2FDisplayName: values.AlipayF2FDisplayName.trim(),
     }
 
     const initial = {
@@ -551,6 +756,29 @@ export function PaymentSettingsSection({
       StripeMinTopUp: initialRef.current.StripeMinTopUp,
       StripePromotionCodesEnabled:
         initialRef.current.StripePromotionCodesEnabled,
+      AlipayF2FEnabled: initialRef.current.AlipayF2FEnabled,
+      AlipayF2FAppId: initialRef.current.AlipayF2FAppId.trim(),
+      AlipayF2FPrivateKey: initialRef.current.AlipayF2FPrivateKey.trim(),
+      AlipayF2FPublicKey: initialRef.current.AlipayF2FPublicKey.trim(),
+      AlipayF2FGatewayUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FGatewayUrl
+      ),
+      AlipayF2FSandboxEnabled: initialRef.current.AlipayF2FSandboxEnabled,
+      AlipayF2FTopUpNotifyUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FTopUpNotifyUrl
+      ),
+      AlipayF2FTopUpReturnUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FTopUpReturnUrl
+      ),
+      AlipayF2FSubscriptionNotifyUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FSubscriptionNotifyUrl
+      ),
+      AlipayF2FSubscriptionReturnUrl: removeTrailingSlash(
+        initialRef.current.AlipayF2FSubscriptionReturnUrl
+      ),
+      AlipayF2FSellerId: initialRef.current.AlipayF2FSellerId.trim(),
+      AlipayF2FMinTopUp: initialRef.current.AlipayF2FMinTopUp,
+      AlipayF2FDisplayName: initialRef.current.AlipayF2FDisplayName.trim(),
     }
 
     const updates: Array<{ key: string; value: string | number | boolean }> = []
@@ -645,6 +873,94 @@ export function PaymentSettingsSection({
       updates.push({
         key: 'StripePromotionCodesEnabled',
         value: sanitized.StripePromotionCodesEnabled,
+      })
+    }
+
+    if (sanitized.AlipayF2FEnabled !== initial.AlipayF2FEnabled) {
+      updates.push({
+        key: 'AlipayF2FEnabled',
+        value: sanitized.AlipayF2FEnabled,
+      })
+    }
+    if (sanitized.AlipayF2FAppId !== initial.AlipayF2FAppId) {
+      updates.push({ key: 'AlipayF2FAppId', value: sanitized.AlipayF2FAppId })
+    }
+    if (
+      sanitized.AlipayF2FPrivateKey &&
+      sanitized.AlipayF2FPrivateKey !== initial.AlipayF2FPrivateKey
+    ) {
+      updates.push({
+        key: 'AlipayF2FPrivateKey',
+        value: sanitized.AlipayF2FPrivateKey,
+      })
+    }
+    if (
+      sanitized.AlipayF2FPublicKey &&
+      sanitized.AlipayF2FPublicKey !== initial.AlipayF2FPublicKey
+    ) {
+      updates.push({
+        key: 'AlipayF2FPublicKey',
+        value: sanitized.AlipayF2FPublicKey,
+      })
+    }
+    if (sanitized.AlipayF2FGatewayUrl !== initial.AlipayF2FGatewayUrl) {
+      updates.push({
+        key: 'AlipayF2FGatewayUrl',
+        value: sanitized.AlipayF2FGatewayUrl,
+      })
+    }
+    if (sanitized.AlipayF2FSandboxEnabled !== initial.AlipayF2FSandboxEnabled) {
+      updates.push({
+        key: 'AlipayF2FSandboxEnabled',
+        value: sanitized.AlipayF2FSandboxEnabled,
+      })
+    }
+    if (sanitized.AlipayF2FTopUpNotifyUrl !== initial.AlipayF2FTopUpNotifyUrl) {
+      updates.push({
+        key: 'AlipayF2FTopUpNotifyUrl',
+        value: sanitized.AlipayF2FTopUpNotifyUrl,
+      })
+    }
+    if (sanitized.AlipayF2FTopUpReturnUrl !== initial.AlipayF2FTopUpReturnUrl) {
+      updates.push({
+        key: 'AlipayF2FTopUpReturnUrl',
+        value: sanitized.AlipayF2FTopUpReturnUrl,
+      })
+    }
+    if (
+      sanitized.AlipayF2FSubscriptionNotifyUrl !==
+      initial.AlipayF2FSubscriptionNotifyUrl
+    ) {
+      updates.push({
+        key: 'AlipayF2FSubscriptionNotifyUrl',
+        value: sanitized.AlipayF2FSubscriptionNotifyUrl,
+      })
+    }
+    if (
+      sanitized.AlipayF2FSubscriptionReturnUrl !==
+      initial.AlipayF2FSubscriptionReturnUrl
+    ) {
+      updates.push({
+        key: 'AlipayF2FSubscriptionReturnUrl',
+        value: sanitized.AlipayF2FSubscriptionReturnUrl,
+      })
+    }
+    if (sanitized.AlipayF2FSellerId !== initial.AlipayF2FSellerId) {
+      updates.push({
+        key: 'AlipayF2FSellerId',
+        value: sanitized.AlipayF2FSellerId,
+      })
+    }
+    if (sanitized.AlipayF2FMinTopUp !== initial.AlipayF2FMinTopUp) {
+      updates.push({
+        key: 'AlipayF2FMinTopUp',
+        value: sanitized.AlipayF2FMinTopUp,
+      })
+    }
+    if (sanitized.AlipayF2FDisplayName !== initial.AlipayF2FDisplayName) {
+      updates.push({
+        key: 'AlipayF2FDisplayName',
+        value: sanitized.AlipayF2FDisplayName,
       })
     }
 
@@ -1088,6 +1404,354 @@ export function PaymentSettingsSection({
               {updateOption.isPending
                 ? t('Saving...')
                 : t('Save Epay settings')}
+            </Button>
+          </div>
+
+          <Separator />
+
+          <div className='space-y-4'>
+            <div>
+              <h3 className='text-lg font-medium'>
+                {t('Alipay Face-to-Face Gateway')}
+              </h3>
+              <p className='text-muted-foreground text-sm'>
+                {t('Configure official Alipay face-to-face QR code payment')}
+              </p>
+            </div>
+
+            <div className='rounded-md bg-amber-50 p-4 text-sm text-amber-950 dark:bg-amber-950 dark:text-amber-100'>
+              <p className='mb-2 font-medium'>{t('Fixed Alipay display')}</p>
+              <div className='grid gap-2 md:grid-cols-2'>
+                <div>
+                  <span className='font-medium'>{t('Subject')}:</span>{' '}
+                  <code className='rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900'>
+                    启宝扫码点餐订单
+                  </code>
+                </div>
+                <div>
+                  <span className='font-medium'>{t('Body')}:</span>{' '}
+                  <code className='rounded bg-amber-100 px-1 py-0.5 text-xs dark:bg-amber-900'>
+                    线下餐饮扫码点餐服务
+                  </code>
+                </div>
+              </div>
+              <p className='mt-2 text-xs opacity-80'>
+                {t(
+                  'These two fields are code constants and are not configurable from the admin page.'
+                )}
+              </p>
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FEnabled'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-base'>
+                        {t('Enable Alipay Face-to-Face')}
+                      </FormLabel>
+                      <FormDescription>
+                        {t(
+                          'Payment compliance must be confirmed before this method is shown to users.'
+                        )}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FSandboxEnabled'
+                render={({ field }) => (
+                  <FormItem className='flex flex-row items-center justify-between rounded-lg border p-4'>
+                    <div className='space-y-0.5'>
+                      <FormLabel className='text-base'>
+                        {t('Sandbox mode')}
+                      </FormLabel>
+                      <FormDescription>
+                        {t('Use Alipay sandbox gateway and credentials')}
+                      </FormDescription>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-3'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FDisplayName'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Display name')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='支付宝当面付'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Name shown in the user payment selector')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FAppId'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Alipay App ID')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='2021000000000000'
+                        autoComplete='off'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FMinTopUp'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Minimum top-up (USD)')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        type='number'
+                        min={1}
+                        step='1'
+                        value={(field.value ?? 1) as number}
+                        onChange={(event) =>
+                          field.onChange(event.target.valueAsNumber)
+                        }
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Minimum amount for Alipay face-to-face recharge')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FGatewayUrl'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Gateway URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='https://openapi.alipay.com/gateway.do'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Official Alipay OpenAPI gateway')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FSellerId'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Seller ID')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder={t('Optional, verify seller_id when set')}
+                        autoComplete='off'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Optional seller_id guard for callback verification')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FPrivateKey'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Application private key')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={5}
+                        placeholder={t('Leave blank unless updating')}
+                        autoComplete='new-password'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Supports PEM or raw private key text')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FPublicKey'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Alipay public key')}</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        rows={5}
+                        placeholder={t('Leave blank unless updating')}
+                        autoComplete='new-password'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Used for RSA2 callback signature verification')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FTopUpNotifyUrl'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Wallet notify URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='<CallbackAddress>/api/user/alipay-f2f/notify'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Leave blank to use the default callback address')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FTopUpReturnUrl'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Wallet return URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='<CallbackAddress>/api/user/alipay-f2f/return'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Browser return only; not used as success proof')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className='grid gap-6 md:grid-cols-2'>
+              <FormField
+                control={form.control}
+                name='AlipayF2FSubscriptionNotifyUrl'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Subscription notify URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='<CallbackAddress>/api/subscription/alipay-f2f/notify'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Leave blank to use the default callback address')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='AlipayF2FSubscriptionReturnUrl'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('Subscription return URL')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder='<CallbackAddress>/api/subscription/alipay-f2f/return'
+                        {...field}
+                        onChange={(event) => field.onChange(event.target.value)}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      {t('Browser return only; not used as success proof')}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <Button
+              type='button'
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                saveAlipayF2FSettings()
+              }}
+              disabled={updateOption.isPending}
+            >
+              {updateOption.isPending
+                ? t('Saving...')
+                : t('Save Alipay Face-to-Face settings')}
             </Button>
           </div>
 

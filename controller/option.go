@@ -44,7 +44,7 @@ func isPositiveOptionValue(value string) bool {
 
 func isVisiblePublicKeyOption(key string) bool {
 	switch key {
-	case "WaffoPancakeWebhookPublicKey", "WaffoPancakeWebhookTestKey":
+	case "AlipayF2FPublicKey", "WaffoPancakeWebhookPublicKey", "WaffoPancakeWebhookTestKey":
 		return true
 	default:
 		return false

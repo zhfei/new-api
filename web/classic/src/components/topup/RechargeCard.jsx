@@ -56,6 +56,7 @@ const RechargeCard = ({
   t,
   enableOnlineTopUp,
   enableStripeTopUp,
+  enableAlipayF2FTopUp,
   enableCreemTopUp,
   creemProducts,
   creemPreTopUp,
@@ -230,6 +231,7 @@ const RechargeCard = ({
           </div>
         ) : enableOnlineTopUp ||
           enableStripeTopUp ||
+          enableAlipayF2FTopUp ||
           enableCreemTopUp ||
           enableWaffoTopUp ||
           enableWaffoPancakeTopUp ? (
@@ -240,6 +242,7 @@ const RechargeCard = ({
             <div className='space-y-6'>
               {(enableOnlineTopUp ||
                 enableStripeTopUp ||
+                enableAlipayF2FTopUp ||
                 enableWaffoTopUp ||
                 enableWaffoPancakeTopUp) && (
                 <Row gutter={12}>
@@ -250,6 +253,7 @@ const RechargeCard = ({
                       disabled={
                         !enableOnlineTopUp &&
                         !enableStripeTopUp &&
+                        !enableAlipayF2FTopUp &&
                         !enableWaffoTopUp &&
                         !enableWaffoPancakeTopUp
                       }
@@ -312,6 +316,7 @@ const RechargeCard = ({
                             const minTopupVal =
                               Number(payMethod.min_topup) || 0;
                             const isStripe = payMethod.type === 'stripe';
+                            const isAlipayF2F = payMethod.type === 'alipay_f2f';
                             const isWaffo =
                               typeof payMethod.type === 'string' &&
                               payMethod.type.startsWith('waffo:');
@@ -320,9 +325,11 @@ const RechargeCard = ({
                             const disabled =
                               (!enableOnlineTopUp &&
                                 !isStripe &&
+                                !isAlipayF2F &&
                                 !isWaffo &&
                                 !isWaffoPancake) ||
                               (!enableStripeTopUp && isStripe) ||
+                              (!enableAlipayF2FTopUp && isAlipayF2F) ||
                               (!enableWaffoTopUp && isWaffo) ||
                               (!enableWaffoPancakeTopUp && isWaffoPancake) ||
                               minTopupVal > Number(topUpCount || 0);
@@ -338,7 +345,8 @@ const RechargeCard = ({
                                   paymentLoading && payWay === payMethod.type
                                 }
                                 icon={
-                                  payMethod.type === 'alipay' ? (
+                                  payMethod.type === 'alipay' ||
+                                  payMethod.type === 'alipay_f2f' ? (
                                     <SiAlipay size={18} color='#1677FF' />
                                   ) : payMethod.type === 'wxpay' ? (
                                     <SiWechat size={18} color='#07C160' />
@@ -400,7 +408,10 @@ const RechargeCard = ({
                 </Row>
               )}
 
-              {(enableOnlineTopUp || enableStripeTopUp || enableWaffoTopUp) && (
+              {(enableOnlineTopUp ||
+                enableStripeTopUp ||
+                enableAlipayF2FTopUp ||
+                enableWaffoTopUp) && (
                 <Form.Slot
                   label={
                     <div className='flex items-center gap-2'>
@@ -515,7 +526,9 @@ const RechargeCard = ({
                               {t('实付')} {symbol}
                               {displayActualPay.toFixed(2)}，
                               {hasDiscount
-                                ? `${t('节省')} ${symbol}${displaySave.toFixed(2)}`
+                                ? `${t('节省')} ${symbol}${displaySave.toFixed(
+                                    2,
+                                  )}`
                                 : `${t('节省')} ${symbol}0.00`}
                             </div>
                           </div>
@@ -671,7 +684,7 @@ const RechargeCard = ({
                 loading={subscriptionLoading}
                 plans={subscriptionPlans}
                 payMethods={payMethods}
-                enableOnlineTopUp={enableOnlineTopUp}
+                enableOnlineTopUp={enableOnlineTopUp || enableAlipayF2FTopUp}
                 enableStripeTopUp={enableStripeTopUp}
                 enableCreemTopUp={enableCreemTopUp}
                 billingPreference={billingPreference}
