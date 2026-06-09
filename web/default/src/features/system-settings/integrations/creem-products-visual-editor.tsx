@@ -45,6 +45,16 @@ type CreemProductsVisualEditorProps = {
   onChange: (value: string) => void
 }
 
+function getCreemProductId(item: Record<string, unknown>): string {
+  if (typeof item.productId === 'string') return item.productId
+  if (typeof item.product_id === 'string') return item.product_id
+  return ''
+}
+
+function isRecord(item: unknown): item is Record<string, unknown> {
+  return typeof item === 'object' && item !== null
+}
+
 export function CreemProductsVisualEditor({
   value,
   onChange,
@@ -62,21 +72,22 @@ export function CreemProductsVisualEditor({
       context: 'creem products',
     })
 
-    return parsed.filter(
-      (item): item is CreemProductData =>
-        typeof item === 'object' &&
-        item !== null &&
-        'name' in item &&
-        'productId' in item &&
-        'price' in item &&
-        'quota' in item &&
-        'currency' in item &&
-        typeof item.name === 'string' &&
-        typeof item.productId === 'string' &&
-        typeof item.price === 'number' &&
-        typeof item.quota === 'number' &&
-        (item.currency === 'USD' || item.currency === 'EUR')
-    )
+    return parsed
+      .filter(isRecord)
+      .map((item) => {
+        const productId = getCreemProductId(item)
+        return {
+          name: typeof item.name === 'string' ? item.name : '',
+          productId,
+          price: Number(item.price) || 0,
+          quota: Number(item.quota) || 0,
+          currency: item.currency === 'EUR' ? 'EUR' : 'USD',
+        } satisfies CreemProductData
+      })
+      .filter(
+        (item) =>
+          item.name && item.productId && item.price > 0 && item.quota > 0
+      )
   }, [value, t])
 
   const filteredProducts = useMemo(() => {
@@ -100,11 +111,8 @@ export function CreemProductsVisualEditor({
 
     if (editData) {
       const index = updatedArray.findIndex(
-        (item): item is CreemProductData =>
-          typeof item === 'object' &&
-          item !== null &&
-          'productId' in item &&
-          item.productId === editData.productId
+        (item): item is Record<string, unknown> =>
+          isRecord(item) && getCreemProductId(item) === editData.productId
       )
       if (index !== -1) {
         updatedArray[index] = data
@@ -127,12 +135,7 @@ export function CreemProductsVisualEditor({
 
     const updatedArray = parsed.filter(
       (item) =>
-        !(
-          typeof item === 'object' &&
-          item !== null &&
-          'productId' in item &&
-          item.productId === product.productId
-        )
+        !(isRecord(item) && getCreemProductId(item) === product.productId)
     )
 
     onChange(JSON.stringify(updatedArray, null, 2))

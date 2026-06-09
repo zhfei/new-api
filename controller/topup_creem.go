@@ -6,16 +6,16 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+	"time"
+
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 	"github.com/QuantumNous/new-api/setting"
-	"io"
-	"net/http"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/thanhpk/randstr"
@@ -53,14 +53,28 @@ type CreemPayRequest struct {
 }
 
 type CreemProduct struct {
-	ProductId string  `json:"productId"`
-	Name      string  `json:"name"`
-	Price     float64 `json:"price"`
-	Currency  string  `json:"currency"`
-	Quota     int64   `json:"quota"`
+	ProductId      string  `json:"productId"`
+	ProductIdSnake string  `json:"product_id,omitempty"`
+	Name           string  `json:"name"`
+	Price          float64 `json:"price"`
+	Currency       string  `json:"currency"`
+	Quota          int64   `json:"quota"`
 }
 
 type CreemAdaptor struct {
+}
+
+func parseCreemProductsConfig() ([]CreemProduct, error) {
+	var products []CreemProduct
+	if err := common.UnmarshalJsonStr(setting.CreemProducts, &products); err != nil {
+		return nil, err
+	}
+	for i := range products {
+		if products[i].ProductId == "" {
+			products[i].ProductId = products[i].ProductIdSnake
+		}
+	}
+	return products, nil
 }
 
 func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
@@ -75,8 +89,7 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 	}
 
 	// 解析产品列表
-	var products []CreemProduct
-	err := json.Unmarshal([]byte(setting.CreemProducts), &products)
+	products, err := parseCreemProductsConfig()
 	if err != nil {
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 产品配置解析失败 user_id=%d error=%q", c.GetInt("id"), err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "产品配置错误"})
@@ -94,6 +107,11 @@ func (*CreemAdaptor) RequestPay(c *gin.Context, req *CreemPayRequest) {
 
 	if selectedProduct == nil {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "产品不存在"})
+		return
+	}
+	if selectedProduct.ProductId == "" || selectedProduct.Price <= 0 || selectedProduct.Quota <= 0 {
+		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 产品配置不完整 user_id=%d product_id=%q name=%q price=%.2f quota=%d", c.GetInt("id"), selectedProduct.ProductId, selectedProduct.Name, selectedProduct.Price, selectedProduct.Quota))
+		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "产品配置不完整，请联系管理员"})
 		return
 	}
 
@@ -402,7 +420,7 @@ func genCreemLink(ctx context.Context, referenceId string, product *CreemProduct
 	}
 
 	// 序列化请求数据
-	jsonData, err := json.Marshal(requestData)
+	jsonData, err := common.Marshal(requestData)
 	if err != nil {
 		return "", fmt.Errorf("序列化请求数据失败: %v", err)
 	}
@@ -443,7 +461,7 @@ func genCreemLink(ctx context.Context, referenceId string, product *CreemProduct
 	}
 	// 解析响应
 	var checkoutResp CreemCheckoutResponse
-	err = json.Unmarshal(body, &checkoutResp)
+	err = common.Unmarshal(body, &checkoutResp)
 	if err != nil {
 		return "", fmt.Errorf("解析响应失败: %v", err)
 	}

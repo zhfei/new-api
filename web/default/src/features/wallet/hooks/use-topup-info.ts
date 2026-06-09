@@ -105,10 +105,16 @@ function parseCreemProducts(data: unknown): CreemProduct[] {
     .map((item) => {
       const currency: CreemProduct['currency'] =
         item.currency === 'EUR' ? 'EUR' : 'USD'
+      const productId =
+        typeof item.productId === 'string'
+          ? item.productId
+          : typeof item.product_id === 'string'
+            ? item.product_id
+            : ''
 
       return {
         name: typeof item.name === 'string' ? item.name : '',
-        productId: typeof item.productId === 'string' ? item.productId : '',
+        productId,
         price: Number(item.price) || 0,
         quota: Number(item.quota) || 0,
         currency,
